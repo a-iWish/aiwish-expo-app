@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { ThemeColors, spacing, fontSize } from '../styles/theme';
 
 interface PriceDisplayProps {
-  currentPrice: number;
+  currentPrice: number | null;
   oldPrice: number | null;
   changePercentage: number | null;
   size?: 'small' | 'large';
@@ -20,26 +20,40 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const isLarge = size === 'large';
 
+  if (currentPrice == null) {
+    return (
+      <View style={styles.container}>
+        <Text style={[styles.currentPrice, isLarge && styles.currentPriceLarge, { color: colors.textMuted }]}>
+          Price unavailable
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={[styles.currentPrice, isLarge && styles.currentPriceLarge]}>
         ${currentPrice.toFixed(2)}
       </Text>
-      {oldPrice && oldPrice !== currentPrice && (
+      {oldPrice != null && oldPrice !== currentPrice && (
         <Text style={[styles.oldPrice, isLarge && styles.oldPriceLarge]}>
           ${oldPrice.toFixed(2)}
         </Text>
       )}
-      {changePercentage !== null && changePercentage !== 0 && (
+      {changePercentage != null && changePercentage !== 0 && (
         <View
           style={[
             styles.changeBadge,
             changePercentage < 0 ? styles.changeDown : styles.changeUp,
           ]}
         >
-          <Text style={[styles.changeText, { color: changePercentage < 0 ? colors.success : colors.error }]}>
-            {changePercentage > 0 ? '+' : ''}
-            {changePercentage.toFixed(1)}%
+          <Text
+            style={[
+              styles.changeText,
+              { color: changePercentage < 0 ? colors.success : colors.error },
+            ]}
+          >
+            {changePercentage < 0 ? '↓' : '↑'}{Math.abs(changePercentage).toFixed(0)}%
           </Text>
         </View>
       )}
@@ -53,38 +67,40 @@ const createStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       flexWrap: 'wrap',
+      gap: 6,
     },
     currentPrice: {
       fontSize: fontSize.md,
-      fontWeight: '700',
+      fontWeight: '800',
+      letterSpacing: -0.3,
       color: colors.textPrimary,
     },
     currentPriceLarge: {
       fontSize: fontSize.xxl,
+      letterSpacing: -1,
     },
     oldPrice: {
-      marginLeft: spacing.sm,
       fontSize: fontSize.xs,
       color: colors.textMuted,
       textDecorationLine: 'line-through',
     },
     oldPriceLarge: {
-      fontSize: fontSize.lg,
+      fontSize: fontSize.md,
     },
     changeBadge: {
-      marginLeft: spacing.sm,
-      paddingHorizontal: spacing.sm,
+      paddingHorizontal: 7,
       paddingVertical: 2,
-      borderRadius: 20,
+      borderRadius: 100,
     },
     changeDown: {
-      backgroundColor: 'rgba(34, 197, 94, 0.15)',
+      backgroundColor: 'rgba(110,231,183,0.12)',
     },
     changeUp: {
-      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+      backgroundColor: 'rgba(248,113,113,0.12)',
     },
     changeText: {
       fontSize: fontSize.xs,
-      fontWeight: '600',
+      fontWeight: '700',
+      letterSpacing: 0.3,
     },
   });

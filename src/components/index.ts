@@ -1,3 +1,4 @@
+export { BrandWordmark } from './BrandWordmark';
 export { ProductCard } from './ProductCard';
 export { PriceDisplay } from './PriceDisplay';
 export { RecommendationBadge } from './RecommendationBadge';

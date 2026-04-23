@@ -1,71 +1,163 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { StackNavigationProp } from '@react-navigation/stack';
+import React, { useState, useMemo, useCallback } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+  Pressable,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { mockProducts } from '../data/mockProducts';
+import { useProducts } from '../hooks/useProducts';
 import { Product } from '../types/product';
-import { ProductCard, Button } from '../components';
+import { BrandWordmark, ProductCard, Button } from '../components';
 import { useTheme } from '../context/ThemeContext';
-import { ThemeColors, spacing, fontSize } from '../styles/theme';
+import { ThemeColors, spacing, fontSize, appIconSizes, MONO_FONT } from '../styles/theme';
+
+const ALL_CATEGORIES = ['Baby', 'Cameras', 'Headphones', 'Home Electronics & Personal Care'] as const;
 
 type Props = {
-  navigation: StackNavigationProp<RootStackParamList, 'ProductSelector'>;
+  navigation: NativeStackNavigationProp<RootStackParamList, 'ProductSelector'>;
 };
 
 export const ProductSelectorScreen: React.FC<Props> = ({ navigation }) => {
   const { colors, isDark, toggleTheme } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { products, loading, error, refetch } = useProducts();
 
-  const handleProductPress = (product: Product) => {
-    setSelectedProduct((prev) =>
-      prev?.product_id === product.product_id ? null : product
-    );
-  };
+  const filteredProducts = useMemo(() => {
+    let list = products;
+    if (selectedCategory) list = list.filter((p) => p.category === selectedCategory);
+    return list;
+  }, [products, selectedCategory]);
+
+  const handleProductPress = useCallback((product: Product) => {
+    setSelectedProduct((prev) => (prev?.id === product.id ? null : product));
+  }, []);
 
   const handleSubmit = () => {
     if (selectedProduct) {
-      navigation.navigate('ProductDetail', {
-        productId: selectedProduct.product_id,
-      });
+      navigation.navigate('ProductDetail', { productId: selectedProduct.id });
     }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
       <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <Text style={styles.logo}>a.iwish</Text>
+        {/* Logo row */}
+        <View style={styles.logoRow}>
+          <View style={styles.logoLeft}>
+            {/* App icon */}
+            <Image
+              source={require('../../assets/aiwish-icon.png')}
+              style={styles.appIcon}
+              resizeMode="contain"
+              accessibilityIgnoresInvertColors
+            />
+            {/* Wordmark */}
+            <View style={styles.wordmarkBlock}>
+              <BrandWordmark textStyle={styles.logoText} iwishColor={colors.brandEnd} />
+            </View>
+          </View>
           <TouchableOpacity onPress={toggleTheme} style={styles.themeToggle}>
             <Text style={styles.themeIcon}>{isDark ? '☀️' : '🌙'}</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.subtitle}>Smart Wishlist with ML Price Prediction</Text>
-        <Text style={styles.instruction}>
-          Select a product to view price insights
-        </Text>
+
+        {/* Page title */}
+        <Text style={styles.pageTitle}>Know when to buy, not just what to want.</Text>
+
+        {/* Tagline */}
+        <Text style={styles.tagline}>AI-powered price timing, retailer comparison, and deal confidence in one clean view.</Text>
+
+        {/* CATEGORY label */}
+        <Text style={styles.catLabel}>Category</Text>
+
+        {/* Category pills */}
+        {!loading && !error && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.pillRow}
+          >
+            <Pressable
+              style={[styles.pill, !selectedCategory && styles.pillActive]}
+              onPress={() => setSelectedCategory(null)}
+            >
+              <Text style={[styles.pillText, !selectedCategory && styles.pillTextActive]}>
+                All
+              </Text>
+            </Pressable>
+            {ALL_CATEGORIES.map((cat) => (
+              <Pressable
+                key={cat}
+                style={[styles.pill, selectedCategory === cat && styles.pillActive]}
+                onPress={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+              >
+                <Text style={[styles.pillText, selectedCategory === cat && styles.pillTextActive]}>
+                  {cat}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* Product count */}
+        {!loading && !error && (
+          <Text style={styles.prodCount}>{filteredProducts.length} products</Text>
+        )}
       </View>
 
-      <FlatList
-        data={mockProducts}
-        keyExtractor={(item) => item.product_id}
-        renderItem={({ item }) => (
-          <ProductCard
-            product={item}
-            onPress={handleProductPress}
-            selected={selectedProduct?.product_id === item.product_id}
+      {/* ── Content ────────────────────────────────────────────────────── */}
+      {loading ? (
+        <View style={styles.centered}>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.loadingIcon}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
           />
-        )}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      />
+          <ActivityIndicator size="large" color={colors.secondary} style={{ marginTop: spacing.md }} />
+          <Text style={styles.loadingText}>Loading products...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>{error}</Text>
+          <Button title="Retry" onPress={refetch} />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredProducts}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <ProductCard
+              product={item}
+              onPress={handleProductPress}
+              selected={selectedProduct?.id === item.id}
+            />
+          )}
+          style={styles.flatList}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
+      {/* ── Footer CTA ─────────────────────────────────────────────────── */}
       <View style={styles.footer}>
         <Button
           title={
             selectedProduct
-              ? `View ${selectedProduct.title.split(' ').slice(0, 3).join(' ')}...`
+              ? `View ${selectedProduct.name.split(' ').slice(0, 3).join(' ')}...`
               : 'Select a product'
           }
           onPress={handleSubmit}
@@ -76,59 +168,156 @@ export const ProductSelectorScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const createStyles = (colors: ThemeColors) =>
+const createStyles = (colors: ThemeColors, bottomInset: number) =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
     },
+
+    // ── Header
     header: {
       paddingHorizontal: spacing.md,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.md,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.sm + 4,
+      backgroundColor: colors.headerBg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
-    headerRow: {
+    logoRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 3,
     },
-    logo: {
-      fontSize: fontSize.xxl,
-      fontWeight: '900',
-      color: colors.primary,
-      letterSpacing: -1,
+    logoLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    appIcon: {
+      width: 50,
+      height: 50,
+      borderRadius: 10,
+    },
+    wordmarkBlock: {},
+    logoText: {
+      fontSize: 26,
+      fontWeight: '700',
+      letterSpacing: -0.8,
+      color: colors.text,
     },
     themeToggle: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderMed,
       alignItems: 'center',
       justifyContent: 'center',
     },
     themeIcon: {
+      fontSize: 17,
+    },
+    tagline: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.textMuted,
+      letterSpacing: -0.1,
+      marginTop: 10,
+      marginBottom: 14,
+    },
+    pageTitle: {
       fontSize: 20,
+      fontWeight: '700',
+      letterSpacing: -0.5,
+      color: colors.text,
+      marginBottom: spacing.md,
+      lineHeight: 25,
     },
-    subtitle: {
-      fontSize: fontSize.sm,
-      color: colors.textSecondary,
-      marginTop: spacing.xs,
-    },
-    instruction: {
-      fontSize: fontSize.md,
-      color: colors.textPrimary,
+    catLabel: {
+      fontSize: 10,
       fontWeight: '600',
-      marginTop: spacing.md,
+      letterSpacing: 2,
+      textTransform: 'uppercase',
+      color: colors.textMuted,
+      marginBottom: 10,
+      fontFamily: 'Roboto',
     },
-    list: {
+    pillRow: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingRight: spacing.md,
+    },
+    pill: {
+      paddingHorizontal: 18,
+      paddingVertical: 7,
+      borderRadius: 100,
+      borderWidth: 1,
+      borderColor: colors.borderMed,
+      backgroundColor: colors.surface,
+    },
+    pillActive: {
+      backgroundColor: colors.surface2,
+      borderColor: colors.brandEnd,
+    },
+    pillText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textMuted,
+      letterSpacing: -0.1,
+    },
+    pillTextActive: {
+      color: colors.brandEnd,
+      fontWeight: '600',
+    },
+    prodCount: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.textSoft,
+      marginTop: 8,
+    },
+
+    // ── List
+    flatList: { flex: 1 },
+    listContent: {
       paddingHorizontal: spacing.md,
-      paddingBottom: spacing.md,
+      paddingTop: spacing.sm + 4,
+      paddingBottom: bottomInset + 120,
     },
+
+    // ── States
+    centered: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+    },
+    loadingIcon: {
+      width: appIconSizes.state,
+      height: appIconSizes.state,
+      borderRadius: 20,
+    },
+    loadingText: {
+      marginTop: spacing.sm,
+      fontSize: fontSize.sm,
+      color: colors.textMuted,
+    },
+    errorText: {
+      fontSize: fontSize.md,
+      color: colors.error,
+      textAlign: 'center',
+      marginBottom: spacing.md,
+    },
+
+    // ── Footer
     footer: {
-      padding: spacing.md,
-      paddingBottom: spacing.lg,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm + 4,
+      paddingBottom: spacing.md + bottomInset,
       backgroundColor: colors.background,
-      borderTopWidth: 1,
+      borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.border,
     },
   });

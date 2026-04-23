@@ -2,9 +2,9 @@ import React, { useMemo } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Product } from '../types/product';
 import { useTheme } from '../context/ThemeContext';
-import { ThemeColors, spacing, borderRadius, fontSize } from '../styles/theme';
+import { ThemeColors, spacing, borderRadius, fontSize, MONO_FONT } from '../styles/theme';
 import { RecommendationBadge } from './RecommendationBadge';
-import { PriceDisplay } from './PriceDisplay';
+import { percentChangeVsReference } from '../utils/priceChangePercent';
 
 interface ProductCardProps {
   product: Product;
@@ -20,36 +20,100 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  const rec = product.recommendation?.toUpperCase() ?? null;
+  const isBuy = rec === 'BUY';
+  const isWait = rec === 'WAIT';
+
+  const referencePrice = product.msrp ?? product.original_price ?? null;
+  const discountPct =
+    product.trusted_price != null
+      ? percentChangeVsReference(product.trusted_price, referencePrice)
+      : null;
+
+  const containerStyle = [
+    styles.container,
+    isBuy && styles.containerBuy,
+    isWait && styles.containerWait,
+    selected && { borderColor: colors.brandEnd, borderWidth: 2 },
+  ];
+
   return (
     <TouchableOpacity
-      style={[styles.container, selected && styles.selected]}
+      style={containerStyle}
       onPress={() => onPress(product)}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
     >
-      <Image source={{ uri: product.thumbnail }} style={styles.image} />
-      <View style={styles.info}>
-        <Text style={styles.source}>{product.source}</Text>
-        <Text style={styles.title} numberOfLines={2}>
-          {product.title}
-        </Text>
-        <PriceDisplay
-          currentPrice={product.extracted_price}
-          oldPrice={product.extracted_old_price}
-          changePercentage={product.price_change_percentage}
-          size="small"
-        />
-        <View style={styles.bottomRow}>
-          <RecommendationBadge
-            recommendation={product.recommendation}
-            confidence={product.recommendation_confidence}
-            size="small"
-          />
-          <Text style={styles.rating}>
-            {'★'} {product.rating}
+      <View style={styles.inner}>
+        {/* Product image */}
+        <View style={styles.imgWrap}>
+          {product.image_url ? (
+            <Image
+              source={{ uri: product.image_url }}
+              style={styles.image}
+              resizeMode="contain"
+            />
+          ) : (
+            <Text style={styles.imgPlaceholder}>📦</Text>
+          )}
+        </View>
+
+        {/* Body */}
+        <View style={styles.body}>
+          {/* Retailer */}
+          <Text style={styles.retailer} numberOfLines={1}>
+            {product.trusted_source?.toUpperCase() ?? ''}
           </Text>
+
+          {/* Name */}
+          <Text style={styles.name} numberOfLines={2}>
+            {product.name}
+          </Text>
+
+          {/* Prices row */}
+          <View style={styles.pricesRow}>
+            {product.trusted_price != null ? (
+              <>
+                <Text style={styles.price}>
+                  ${product.trusted_price.toFixed(2)}
+                </Text>
+                {referencePrice != null && referencePrice !== product.trusted_price && (
+                  <Text style={styles.origPrice}>
+                    ${referencePrice.toFixed(2)}
+                  </Text>
+                )}
+                {discountPct != null && discountPct < 0 && (
+                  <View style={styles.discGreen}>
+                    <Text style={styles.discGreenText}>
+                    ↓{Math.abs(discountPct).toFixed(1)}%
+                    </Text>
+                  </View>
+                )}
+                {discountPct != null && discountPct > 0 && (
+                  <View style={styles.discRed}>
+                    <Text style={styles.discRedText}>
+                      ↑{Math.abs(discountPct).toFixed(1)}%
+                    </Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              <Text style={styles.noPrice}>No trusted price</Text>
+            )}
+          </View>
+
+          {/* Bottom row: badge + rating */}
+          <View style={styles.bottomRow}>
+            <RecommendationBadge
+              recommendation={product.recommendation ?? null}
+              confidence={product.confidence ?? null}
+              size="small"
+            />
+            {product.rating != null && (
+              <Text style={styles.rating}>★ {product.rating.toFixed(1)}</Text>
+            )}
+          </View>
         </View>
       </View>
-      {selected && <View style={styles.checkmark}><Text style={styles.checkmarkText}>✓</Text></View>}
     </TouchableOpacity>
   );
 };
@@ -57,66 +121,130 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
-      flexDirection: 'row',
-      backgroundColor: colors.surface,
-      borderRadius: borderRadius.lg,
-      padding: spacing.md,
-      marginBottom: spacing.sm,
-      borderWidth: 2,
-      borderColor: 'transparent',
+      backgroundColor: colors.cardBg,
+      borderRadius: borderRadius.card,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      position: 'relative',
+      shadowColor: '#9d4edd',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.06,
+      shadowRadius: 16,
+      elevation: 2,
     },
-    selected: {
-      borderColor: colors.primary,
+    containerBuy: {
+      borderColor: colors.successBorder,
+    },
+    containerWait: {
+      borderColor: colors.warningBorder,
+    },
+    cornerGlow: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      width: 100,
+      height: 100,
+      borderTopRightRadius: borderRadius.card,
+    },
+    inner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 14,
+      gap: 14,
+    },
+    imgWrap: {
+      width: 84,
+      height: 84,
+      borderRadius: 12,
+      backgroundColor: colors.white,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+      flexShrink: 0,
     },
     image: {
-      width: 80,
-      height: 80,
-      borderRadius: borderRadius.sm,
-      backgroundColor: colors.surfaceLight,
+      width: '92%',
+      height: '92%',
     },
-    info: {
+    imgPlaceholder: {
+      fontSize: 30,
+    },
+    body: {
       flex: 1,
-      marginLeft: spacing.md,
-      justifyContent: 'space-between',
+      minWidth: 0,
+      gap: 5,
     },
-    source: {
-      fontSize: fontSize.xs,
-      color: colors.primary,
+    retailer: {
+      fontSize: 10,
       fontWeight: '600',
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      letterSpacing: 1.5,
+      color: colors.brandEnd,
+      fontFamily: 'Roboto',
     },
-    title: {
+    name: {
+      fontSize: fontSize.md,
+      fontWeight: '700',
+      letterSpacing: -0.3,
+      color: colors.text,
+      lineHeight: 20,
+    },
+    pricesRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flexWrap: 'wrap',
+    },
+    price: {
+      fontSize: 19,
+      fontWeight: '800',
+      letterSpacing: -0.5,
+      color: colors.text,
+    },
+    origPrice: {
       fontSize: fontSize.sm,
-      color: colors.textPrimary,
-      fontWeight: '500',
-      marginVertical: spacing.xs,
+      color: colors.textSoft,
+      textDecorationLine: 'line-through',
+    },
+    discGreen: {
+      backgroundColor: colors.successBg,
+      paddingHorizontal: 9,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
+    discGreenText: {
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+      color: colors.success,
+      fontFamily: 'Roboto',
+    },
+    discRed: {
+      backgroundColor: 'rgba(248,113,113,0.12)',
+      paddingHorizontal: 9,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
+    discRedText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#f87171',
+      fontFamily: 'Roboto',
+    },
+    noPrice: {
+      fontSize: fontSize.sm,
+      color: colors.textSoft,
+      fontStyle: 'italic',
     },
     bottomRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginTop: spacing.xs,
     },
     rating: {
-      fontSize: fontSize.xs,
+      fontSize: fontSize.sm,
       color: colors.warning,
       fontWeight: '600',
-    },
-    checkmark: {
-      position: 'absolute',
-      top: spacing.sm,
-      right: spacing.sm,
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    checkmarkText: {
-      color: colors.white,
-      fontSize: 14,
-      fontWeight: 'bold',
+      fontFamily: 'Roboto',
     },
   });

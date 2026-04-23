@@ -17,7 +17,7 @@ export const InfoRow: React.FC<InfoRowProps> = ({ label, value, icon }) => {
     <View style={styles.row}>
       {icon && <Text style={styles.icon}>{icon}</Text>}
       <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+      <Text style={styles.value} numberOfLines={2}>{value}</Text>
     </View>
   );
 };
@@ -27,22 +27,28 @@ const createStyles = (colors: ThemeColors) =>
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: spacing.sm,
-      borderBottomWidth: 1,
+      paddingVertical: spacing.sm + 2,
+      borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
     icon: {
-      fontSize: 16,
+      fontSize: 14,
       marginRight: spacing.sm,
+      opacity: 0.7,
     },
     label: {
       flex: 1,
-      fontSize: fontSize.sm,
-      color: colors.textSecondary,
+      fontSize: fontSize.xs,
+      color: colors.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+      fontWeight: '600',
     },
     value: {
+      flex: 1.5,
       fontSize: fontSize.sm,
       color: colors.textPrimary,
       fontWeight: '600',
+      textAlign: 'right',
     },
   });

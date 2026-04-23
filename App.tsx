@@ -1,13 +1,13 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ProductSelectorScreen } from './src/screens/ProductSelectorScreen';
 import { ProductDetailScreen } from './src/screens/ProductDetailScreen';
 import { RootStackParamList } from './src/navigation/types';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 
-const Stack = createStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AppNavigator() {
   const { colors, isDark } = useTheme();
@@ -18,24 +18,18 @@ function AppNavigator() {
       <Stack.Navigator
         initialRouteName="ProductSelector"
         screenOptions={{
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.textPrimary,
-          headerTitleStyle: { fontWeight: '700' },
-          cardStyle: { backgroundColor: colors.background },
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+          animation: 'slide_from_right',
         }}
       >
         <Stack.Screen
           name="ProductSelector"
           component={ProductSelectorScreen}
-          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="ProductDetail"
           component={ProductDetailScreen}
-          options={{
-            title: 'Product Details',
-            headerBackTitle: 'Back',
-          }}
         />
       </Stack.Navigator>
     </>
