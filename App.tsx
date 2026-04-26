@@ -2,10 +2,12 @@ import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { ProductSelectorScreen } from './src/screens/ProductSelectorScreen';
 import { ProductDetailScreen } from './src/screens/ProductDetailScreen';
 import { RootStackParamList } from './src/navigation/types';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { queryClient } from './src/lib/queryClient';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -38,10 +40,12 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <NavigationContainer>
-        <AppNavigator />
-      </NavigationContainer>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <NavigationContainer>
+          <AppNavigator />
+        </NavigationContainer>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
