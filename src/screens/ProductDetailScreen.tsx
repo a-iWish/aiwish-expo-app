@@ -14,29 +14,18 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { useProductDetail } from '../hooks/useProductDetail';
 import {
-  PriceDisplay,
   RecommendationCard,
   PriceChart,
-  InfoRow,
   Button,
 } from '../components';
 import { useTheme } from '../context/ThemeContext';
-import { ThemeColors, spacing, borderRadius, fontSize, appIconSizes, MONO_FONT } from '../styles/theme';
-import { RetailerPriceRow } from '../types/product';
+import { ThemeColors, spacing, borderRadius, fontSize, appIconSizes } from '../styles/theme';
 import { lowestCurrentOffer } from '../utils/lowestCurrentOffer';
-import { mergePredictionSummary } from '../utils/predictionMerge';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetail'>;
 
 const { width: WINDOW_WIDTH } = Dimensions.get('window');
 
-function retailerAccent(row: RetailerPriceRow): string {
-  if (row.source === 'amazon') return '#FF9900';
-  if (row.retailer === 'Walmart') return '#0071CE';
-  if (row.retailer === 'Best Buy') return '#0046BE';
-  if (row.retailer === 'Target') return '#CC0000';
-  return '#c084fc';
-}
 
 /** Section label with a trailing horizontal line */
 const SectionLabel: React.FC<{ label: string; colors: ThemeColors }> = ({ label, colors }) => (
@@ -85,7 +74,9 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, styles.centered]} edges={['top']}>
-        <Image source={require('../../assets/aiwish-icon.png')} style={styles.stateBrandIcon} resizeMode="contain" accessibilityIgnoresInvertColors />
+        <Image source={isDark
+                ? require('../../assets/aiwish-icon.png')
+                : require('../../assets/aiwish-nobg.png')} style={styles.stateBrandIcon} resizeMode="contain" accessibilityIgnoresInvertColors />
         <ActivityIndicator size="large" color={colors.secondary} style={{ marginTop: spacing.md }} />
         <Text style={styles.loadingText}>Loading product...</Text>
       </SafeAreaView>
@@ -95,7 +86,9 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   if (error || !product) {
     return (
       <SafeAreaView style={[styles.container, styles.centered]} edges={['top']}>
-        <Image source={require('../../assets/aiwish-icon.png')} style={styles.stateBrandIcon} resizeMode="contain" accessibilityIgnoresInvertColors />
+        <Image source={isDark
+                ? require('../../assets/aiwish-icon.png')
+                : require('../../assets/aiwish-nobg.png')} style={styles.stateBrandIcon} resizeMode="contain" accessibilityIgnoresInvertColors />
         <Text style={styles.errorText}>{error ?? 'Product not found'}</Text>
         <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
       </SafeAreaView>
@@ -103,18 +96,9 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   }
 
   // ── Data derivation ──────────────────────────────────────────────────────
-  const mergedPrediction = mergePredictionSummary(product.prediction, prediction);
-  const rec = mergedPrediction?.recommendation?.toUpperCase() ?? product.recommendation?.toUpperCase() ?? null;
-  const confidence = mergedPrediction?.confidence ?? product.confidence ?? null;
-
   const headlineOffer = lowestCurrentOffer(product, product.stats ?? null);
-  const amazonRefPriceForChart = product.stats?.amazon_price ?? product.stats?.new_price ?? null;
   const referenceForHeadline = product.stats?.list_price ?? product.original_price ?? null;
   const currentForHeadline = headlineOffer?.price ?? product.current_price ?? null;
-
-  const ratingVal = product.rating ?? product.stats?.rating ?? null;
-  const reviewCount = product.reviews_count ?? product.stats?.review_count ?? null;
-  const showRatingRow = ratingVal != null || reviewCount != null;
 
   // Sort comparison rows by price ascending, find lowest
   const sortedRows = [...comparisonRows].sort((a, b) => {

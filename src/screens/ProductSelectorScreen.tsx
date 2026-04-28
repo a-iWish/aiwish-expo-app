@@ -17,7 +17,7 @@ import { useProducts } from '../hooks/useProducts';
 import { Product } from '../types/product';
 import { BrandWordmark, ProductCard, Button } from '../components';
 import { useTheme } from '../context/ThemeContext';
-import { ThemeColors, spacing, fontSize, appIconSizes, MONO_FONT } from '../styles/theme';
+import { ThemeColors, spacing, fontSize, appIconSizes } from '../styles/theme';
 
 const ALL_CATEGORIES = ['Baby', 'Cameras', 'Headphones', 'Home Electronics & Personal Care'] as const;
 
@@ -59,7 +59,9 @@ export const ProductSelectorScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.logoLeft}>
             {/* App icon */}
             <Image
-              source={require('../../assets/aiwish-icon.png')}
+              source={isDark
+                ? require('../../assets/aiwish-icon.png')
+                : require('../../assets/aiwish-nobg.png')}
               style={styles.appIcon}
               resizeMode="contain"
               accessibilityIgnoresInvertColors
