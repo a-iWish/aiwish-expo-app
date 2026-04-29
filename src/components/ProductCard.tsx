@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Product } from '../types/product';
 import { useTheme } from '../context/ThemeContext';
-import { ThemeColors, spacing, borderRadius, fontSize, MONO_FONT } from '../styles/theme';
+import { ThemeColors, spacing, borderRadius, fontSize } from '../styles/theme';
 import { RecommendationBadge } from './RecommendationBadge';
 import { percentChangeVsReference } from '../utils/priceChangePercent';
 
@@ -50,7 +50,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <Image
               source={{ uri: product.image_url }}
               style={styles.image}
-              resizeMode="contain"
+              resizeMode="cover"
             />
           ) : (
             <Text style={styles.imgPlaceholder}>📦</Text>
@@ -59,15 +59,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Body */}
         <View style={styles.body}>
-          {/* Retailer */}
-          <Text style={styles.retailer} numberOfLines={1}>
-            {product.trusted_source?.toUpperCase() ?? ''}
-          </Text>
-
-          {/* Name */}
-          <Text style={styles.name} numberOfLines={2}>
-            {product.name}
-          </Text>
+          <View style={styles.topLine}>
+            <Text style={styles.retailer} numberOfLines={1}>
+              {product.trusted_source ?? product.retailer ?? 'Trusted retailer'}
+            </Text>
+            <RecommendationBadge
+              recommendation={product.recommendation ?? null}
+              confidence={product.confidence ?? null}
+              size="small"
+            />
+          </View>
+          <View style={styles.titleBlock}>
+            <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+          </View>
 
           {/* Prices row */}
           <View style={styles.pricesRow}>
@@ -103,13 +107,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Bottom row: badge + rating */}
           <View style={styles.bottomRow}>
-            <RecommendationBadge
-              recommendation={product.recommendation ?? null}
-              confidence={product.confidence ?? null}
-              size="small"
-            />
+            <Text style={styles.detailHint}>View price details</Text>
             {product.rating != null && (
-              <Text style={styles.rating}>★ {product.rating.toFixed(1)}</Text>
+              <View style={styles.ratingPill}>
+                <Text style={styles.rating}>★ {product.rating.toFixed(1)}</Text>
+              </View>
             )}
           </View>
         </View>
@@ -123,16 +125,16 @@ const createStyles = (colors: ThemeColors) =>
     container: {
       backgroundColor: colors.cardBg,
       borderRadius: borderRadius.card,
-      marginBottom: 10,
+      marginBottom: 12,
       borderWidth: 1,
       borderColor: colors.border,
       overflow: 'hidden',
       position: 'relative',
-      shadowColor: '#9d4edd',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.06,
-      shadowRadius: 16,
-      elevation: 2,
+      shadowColor: '#17151C',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 10,
+      elevation: 1,
     },
     containerBuy: {
       borderColor: colors.successBorder,
@@ -150,23 +152,23 @@ const createStyles = (colors: ThemeColors) =>
     },
     inner: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       padding: 14,
       gap: 14,
     },
     imgWrap: {
       width: 84,
       height: 84,
-      borderRadius: 12,
-      backgroundColor: colors.white,
+      borderRadius: 10,
+      backgroundColor: colors.surfaceLight,
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
       flexShrink: 0,
     },
     image: {
-      width: '92%',
-      height: '92%',
+      width: '100%',
+      height: '100%',
     },
     imgPlaceholder: {
       fontSize: 30,
@@ -174,32 +176,43 @@ const createStyles = (colors: ThemeColors) =>
     body: {
       flex: 1,
       minWidth: 0,
-      gap: 5,
+      gap: spacing.sm,
+    },
+    titleBlock: {
+      gap: 3,
+    },
+    topLine: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.sm,
+      justifyContent: 'space-between',
     },
     retailer: {
-      fontSize: 10,
-      fontWeight: '600',
-      letterSpacing: 1.5,
-      color: colors.brandEnd,
-      fontFamily: 'Roboto',
+      flex: 1,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0,
+      color: colors.textMuted,
+      textTransform: 'uppercase',
     },
     name: {
-      fontSize: fontSize.md,
-      fontWeight: '700',
-      letterSpacing: -0.3,
+      fontSize: fontSize.md + 1,
+      fontWeight: '800',
+      letterSpacing: 0,
       color: colors.text,
-      lineHeight: 20,
+      lineHeight: 21,
     },
     pricesRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
       flexWrap: 'wrap',
+      marginTop: 1,
     },
     price: {
-      fontSize: 19,
-      fontWeight: '800',
-      letterSpacing: -0.5,
+      fontSize: 21,
+      fontWeight: '900',
+      letterSpacing: 0,
       color: colors.text,
     },
     origPrice: {
@@ -217,7 +230,7 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: fontSize.sm,
       fontWeight: '600',
       color: colors.success,
-      fontFamily: 'Roboto',
+      letterSpacing: 0,
     },
     discRed: {
       backgroundColor: 'rgba(248,113,113,0.12)',
@@ -229,7 +242,7 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 11,
       fontWeight: '600',
       color: '#f87171',
-      fontFamily: 'Roboto',
+      letterSpacing: 0,
     },
     noPrice: {
       fontSize: fontSize.sm,
@@ -240,11 +253,28 @@ const createStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      gap: spacing.sm,
+      paddingTop: 1,
+    },
+    detailHint: {
+      color: colors.textSoft,
+      flex: 1,
+      fontSize: 12,
+      fontWeight: '600',
+      letterSpacing: 0,
+    },
+    ratingPill: {
+      backgroundColor: colors.warningBg,
+      borderColor: colors.warningBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
     },
     rating: {
-      fontSize: fontSize.sm,
+      fontSize: 12,
       color: colors.warning,
-      fontWeight: '600',
-      fontFamily: 'Roboto',
+      fontWeight: '700',
+      letterSpacing: 0,
     },
   });

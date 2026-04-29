@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,13 @@ import { ThemeColors, spacing, fontSize, appIconSizes } from '../styles/theme';
 
 const ALL_CATEGORIES = ['Baby', 'Cameras', 'Headphones', 'Home Electronics & Personal Care'] as const;
 
+const CATEGORY_LABELS: Record<string, string> = {
+  Baby: 'Baby',
+  Cameras: 'Cameras',
+  Headphones: 'Audio',
+  'Home Electronics & Personal Care': 'Home tech',
+};
+
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ProductSelector'>;
 };
@@ -29,8 +36,7 @@ export const ProductSelectorScreen: React.FC<Props> = ({ navigation }) => {
   const { colors, isDark, toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
   const { products, loading, error, refetch } = useProducts();
 
   const filteredProducts = useMemo(() => {
@@ -39,15 +45,16 @@ export const ProductSelectorScreen: React.FC<Props> = ({ navigation }) => {
     return list;
   }, [products, selectedCategory]);
 
-  const handleProductPress = useCallback((product: Product) => {
-    setSelectedProduct((prev) => (prev?.id === product.id ? null : product));
-  }, []);
+  const categoryCounts = useMemo(() => {
+    return products.reduce<Record<string, number>>((acc, product) => {
+      acc[product.category] = (acc[product.category] ?? 0) + 1;
+      return acc;
+    }, {});
+  }, [products]);
 
-  const handleSubmit = () => {
-    if (selectedProduct) {
-      navigation.navigate('ProductDetail', { productId: selectedProduct.id });
-    }
-  };
+  const handleProductPress = useCallback((product: Product) => {
+    navigation.navigate('ProductDetail', { productId: product.id });
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -60,8 +67,8 @@ export const ProductSelectorScreen: React.FC<Props> = ({ navigation }) => {
             {/* App icon */}
             <Image
               source={isDark
-                ? require('../../assets/aiwish-icon.png')
-                : require('../../assets/aiwish-nobg.png')}
+                ? require('../../assets/aiwish-logo-transparent-dark.png')
+                : require('../../assets/aiwish-logo-transparent-light.png')}
               style={styles.appIcon}
               resizeMode="contain"
               accessibilityIgnoresInvertColors
@@ -72,15 +79,13 @@ export const ProductSelectorScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           </View>
           <TouchableOpacity onPress={toggleTheme} style={styles.themeToggle}>
-            <Text style={styles.themeIcon}>{isDark ? '☀️' : '🌙'}</Text>
+            <Text style={styles.themeIcon}>{isDark ? '☀︎' : '☾'}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Page title */}
-        <Text style={styles.pageTitle}>Know when to buy, not just what to want.</Text>
-
-        {/* Tagline */}
-        <Text style={styles.tagline}>AI-powered price timing, retailer comparison, and deal confidence in one clean view.</Text>
+        <Text style={styles.headerInstruction}>
+          Choose a product to view price timing and retailer options.
+        </Text>
 
         {/* CATEGORY label */}
         <Text style={styles.catLabel}>Category</Text>
@@ -99,6 +104,9 @@ export const ProductSelectorScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={[styles.pillText, !selectedCategory && styles.pillTextActive]}>
                 All
               </Text>
+              <Text style={[styles.pillCount, !selectedCategory && styles.pillCountActive]}>
+                {products.length}
+              </Text>
             </Pressable>
             {ALL_CATEGORIES.map((cat) => (
               <Pressable
@@ -107,7 +115,10 @@ export const ProductSelectorScreen: React.FC<Props> = ({ navigation }) => {
                 onPress={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
               >
                 <Text style={[styles.pillText, selectedCategory === cat && styles.pillTextActive]}>
-                  {cat}
+                  {CATEGORY_LABELS[cat] ?? cat}
+                </Text>
+                <Text style={[styles.pillCount, selectedCategory === cat && styles.pillCountActive]}>
+                  {categoryCounts[cat] ?? 0}
                 </Text>
               </Pressable>
             ))}
@@ -124,7 +135,9 @@ export const ProductSelectorScreen: React.FC<Props> = ({ navigation }) => {
       {loading ? (
         <View style={styles.centered}>
           <Image
-            source={require('../../assets/icon.png')}
+            source={isDark
+              ? require('../../assets/aiwish-logo-transparent-dark.png')
+              : require('../../assets/aiwish-logo-transparent-light.png')}
             style={styles.loadingIcon}
             resizeMode="contain"
             accessibilityIgnoresInvertColors
@@ -145,7 +158,6 @@ export const ProductSelectorScreen: React.FC<Props> = ({ navigation }) => {
             <ProductCard
               product={item}
               onPress={handleProductPress}
-              selected={selectedProduct?.id === item.id}
             />
           )}
           style={styles.flatList}
@@ -154,18 +166,6 @@ export const ProductSelectorScreen: React.FC<Props> = ({ navigation }) => {
         />
       )}
 
-      {/* ── Footer CTA ─────────────────────────────────────────────────── */}
-      <View style={styles.footer}>
-        <Button
-          title={
-            selectedProduct
-              ? `View ${selectedProduct.name.split(' ').slice(0, 3).join(' ')}...`
-              : 'Select a product'
-          }
-          onPress={handleSubmit}
-          disabled={!selectedProduct}
-        />
-      </View>
     </SafeAreaView>
   );
 };
@@ -200,7 +200,6 @@ const createStyles = (colors: ThemeColors, bottomInset: number) =>
     appIcon: {
       width: 50,
       height: 50,
-      borderRadius: 10,
     },
     wordmarkBlock: {},
     logoText: {
@@ -220,23 +219,19 @@ const createStyles = (colors: ThemeColors, bottomInset: number) =>
       justifyContent: 'center',
     },
     themeIcon: {
-      fontSize: 17,
-    },
-    tagline: {
-      fontSize: 14,
-      fontWeight: '400',
-      color: colors.textMuted,
-      letterSpacing: -0.1,
-      marginTop: 10,
-      marginBottom: 14,
-    },
-    pageTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      letterSpacing: -0.5,
+      fontSize: 16,
+      fontWeight: '800',
+      letterSpacing: 0,
       color: colors.text,
+    },
+    headerInstruction: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textMuted,
+      letterSpacing: 0,
+      lineHeight: 18,
+      marginTop: spacing.sm,
       marginBottom: spacing.md,
-      lineHeight: 25,
     },
     catLabel: {
       fontSize: 10,
@@ -253,9 +248,13 @@ const createStyles = (colors: ThemeColors, bottomInset: number) =>
       paddingRight: spacing.md,
     },
     pill: {
-      paddingHorizontal: 18,
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 8,
+      minHeight: 34,
+      paddingHorizontal: 12,
       paddingVertical: 7,
-      borderRadius: 100,
+      borderRadius: 999,
       borderWidth: 1,
       borderColor: colors.borderMed,
       backgroundColor: colors.surface,
@@ -274,6 +273,22 @@ const createStyles = (colors: ThemeColors, bottomInset: number) =>
       color: colors.brandEnd,
       fontWeight: '600',
     },
+    pillCount: {
+      backgroundColor: colors.surfaceLight,
+      borderRadius: 999,
+      color: colors.textSoft,
+      fontSize: 11,
+      fontWeight: '800',
+      minWidth: 21,
+      overflow: 'hidden',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      textAlign: 'center',
+    },
+    pillCountActive: {
+      backgroundColor: colors.cardBg,
+      color: colors.brandEnd,
+    },
     prodCount: {
       fontSize: 14,
       fontWeight: '400',
@@ -286,7 +301,7 @@ const createStyles = (colors: ThemeColors, bottomInset: number) =>
     listContent: {
       paddingHorizontal: spacing.md,
       paddingTop: spacing.sm + 4,
-      paddingBottom: bottomInset + 120,
+      paddingBottom: bottomInset + spacing.lg,
     },
 
     // ── States
@@ -299,7 +314,6 @@ const createStyles = (colors: ThemeColors, bottomInset: number) =>
     loadingIcon: {
       width: appIconSizes.state,
       height: appIconSizes.state,
-      borderRadius: 20,
     },
     loadingText: {
       marginTop: spacing.sm,
@@ -311,15 +325,5 @@ const createStyles = (colors: ThemeColors, bottomInset: number) =>
       color: colors.error,
       textAlign: 'center',
       marginBottom: spacing.md,
-    },
-
-    // ── Footer
-    footer: {
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.sm + 4,
-      paddingBottom: spacing.md + bottomInset,
-      backgroundColor: colors.background,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.border,
     },
   });

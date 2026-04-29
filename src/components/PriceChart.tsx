@@ -55,6 +55,13 @@ function formatAxisPrice(n: number): string {
   return `$${Math.round(n)}`;
 }
 
+function formatRetailerLabel(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((part) => (part.length <= 3 ? part.toUpperCase() : `${part[0]?.toUpperCase() ?? ''}${part.slice(1).toLowerCase()}`))
+    .join(' ');
+}
+
 function pickXLabelIndices(len: number): number[] {
   if (len <= 0) return [];
   if (len <= 7) return Array.from({ length: len }, (_, i) => i);
@@ -78,6 +85,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { width: windowWidth } = useWindowDimensions();
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const chartLineColor = colors.accent;
+  const chartRangeColor = colors.accent;
+  const referenceColor = colors.warning;
 
   const multiMode = selectedRetailer === null && allRetailerSeries.length > 0;
   const monthsMulti = useMemo(
@@ -132,19 +142,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     H_PAD + (len > 1 ? (i / (len - 1)) * plotInnerWidth : plotInnerWidth / 2);
   const toY = (val: number) => chartHeight - ((val - yMin) / yRange) * chartHeight;
 
-  const minLinePath = useMemo(() => {
-    if (multiMode || activeHistory.length === 0) return '';
-    return activeHistory.map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(i, activeHistory.length).toFixed(1)},${toY(p.min_price).toFixed(1)}`).join(' ');
-  }, [multiMode, activeHistory, plotInnerWidth, yMin, yRange, chartHeight]);
-
   const avgLinePath = useMemo(() => {
     if (multiMode || activeHistory.length === 0) return '';
     return activeHistory.map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(i, activeHistory.length).toFixed(1)},${toY(p.avg_price).toFixed(1)}`).join(' ');
-  }, [multiMode, activeHistory, plotInnerWidth, yMin, yRange, chartHeight]);
-
-  const maxLinePath = useMemo(() => {
-    if (multiMode || activeHistory.length === 0) return '';
-    return activeHistory.map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(i, activeHistory.length).toFixed(1)},${toY(p.max_price).toFixed(1)}`).join(' ');
   }, [multiMode, activeHistory, plotInnerWidth, yMin, yRange, chartHeight]);
 
   const minMaxAreaPath = useMemo(() => {
@@ -202,7 +202,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.chartHead}>
-        <Text style={styles.title}>Price History</Text>
+        <Text style={styles.title}>{multiMode ? 'Retailer trend' : 'Price trend'}</Text>
+        <Text style={styles.chartHint}>
+          {multiMode ? 'Monthly average by retailer' : 'Average price with recent range'}
+        </Text>
       </View>
 
       {/* Retailer tabs */}
@@ -220,7 +223,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             onPress={() => onRetailerChange(null)}
           >
             <Text style={[styles.rtabText, !selectedRetailer && styles.rtabTextActive]}>
-              all
+              All
             </Text>
           </Pressable>
           {retailers.map((r) => (
@@ -230,17 +233,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               onPress={() => onRetailerChange(selectedRetailer === r ? null : r)}
             >
               <Text style={[styles.rtabText, selectedRetailer === r && styles.rtabTextActive]}>
-                {r.toLowerCase()}
+                {formatRetailerLabel(r)}
               </Text>
             </Pressable>
           ))}
         </ScrollView>
-      )}
-
-      {multiMode && (
-        <Text style={styles.subtitle}>
-          Monthly average per retailer. Tap a retailer above for min–max range.
-        </Text>
       )}
 
       {showEmpty ? (
@@ -295,16 +292,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <Svg width={svgWidth} height={chartHeight} viewBox={`0 0 ${svgWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet">
                     <Defs>
                       <LinearGradient id="rangeGrad" x1="0" y1="0" x2="0" y2="1">
-                        <Stop offset="0" stopColor={colors.secondary} stopOpacity="0.18" />
-                        <Stop offset="0.55" stopColor={colors.secondary} stopOpacity="0.06" />
-                        <Stop offset="1" stopColor={colors.secondary} stopOpacity="0" />
+                        <Stop offset="0" stopColor={chartRangeColor} stopOpacity="0.18" />
+                        <Stop offset="0.55" stopColor={chartRangeColor} stopOpacity="0.06" />
+                        <Stop offset="1" stopColor={chartRangeColor} stopOpacity="0" />
                       </LinearGradient>
                     </Defs>
 
                     <Rect x={0} y={0} width={svgWidth} height={chartHeight} fill={colors.surfaceLight} rx={12} ry={12} />
 
                     {yTickValues.map((val, i) => (
-                      <Line key={i} x1={0} y1={toY(val)} x2={svgWidth} y2={toY(val)} stroke={colors.border} strokeWidth={1} opacity={multiMode ? 0.3 : 0.45} />
+                      <Line key={i} x1={0} y1={toY(val)} x2={svgWidth} y2={toY(val)} stroke={colors.border} strokeWidth={1} opacity={0.34} />
                     ))}
 
                     {selectedIndex != null && (multiMode ? monthsMulti.length : activeHistory.length) > 0 && (
@@ -313,7 +310,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         y1={6}
                         x2={toX(selectedIndex, multiMode ? monthsMulti.length : activeHistory.length)}
                         y2={chartHeight - 6}
-                        stroke={colors.primary}
+                        stroke={chartLineColor}
                         strokeWidth={1.5}
                         opacity={0.55}
                       />
@@ -328,10 +325,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                           </React.Fragment>
                         ))}
                         {showAmazonRefLine && (
-                          <Line x1={0} y1={toY(amazonPrice!)} x2={svgWidth} y2={toY(amazonPrice!)} stroke="#FF9900" strokeWidth={2.5} strokeDasharray="10,6" strokeLinecap="round" opacity={0.95} />
+                          <Line x1={0} y1={toY(amazonPrice!)} x2={svgWidth} y2={toY(amazonPrice!)} stroke={referenceColor} strokeWidth={2} strokeDasharray="10,6" strokeLinecap="round" opacity={0.85} />
                         )}
                         {monthsMulti.map((month, i) => {
                           const isSel = selectedIndex === i;
+                          if (!isSel) return null;
                           return (
                             <React.Fragment key={month}>
                               {allRetailerSeries.map((s) => {
@@ -350,23 +348,24 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     ) : (
                       <>
                         <Path d={minMaxAreaPath} fill="url(#rangeGrad)" />
-                        <Path d={maxLinePath} fill="none" stroke={colors.error} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" opacity={0.75} />
-                        <Path d={minLinePath} fill="none" stroke={colors.success} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" opacity={0.75} />
-                        <Path d={avgLinePath} fill="none" stroke={colors.secondary} strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" opacity={1} />
+                        <Path d={avgLinePath} fill="none" stroke={chartLineColor} strokeWidth={3.5} strokeLinejoin="round" strokeLinecap="round" opacity={1} />
                         {showAmazonRefLine && (
-                          <Line x1={0} y1={toY(amazonPrice!)} x2={svgWidth} y2={toY(amazonPrice!)} stroke="#FF9900" strokeWidth={2.5} strokeDasharray="8,5" strokeLinecap="round" opacity={0.95} />
+                          <Line x1={0} y1={toY(amazonPrice!)} x2={svgWidth} y2={toY(amazonPrice!)} stroke={referenceColor} strokeWidth={2} strokeDasharray="8,5" strokeLinecap="round" opacity={0.85} />
                         )}
                         {activeHistory.map((p, i) => {
                           const isSel = selectedIndex === i;
+                          const isEndpoint = i === 0 || i === activeHistory.length - 1;
                           return (
                             <React.Fragment key={i}>
                               {isSel && (
                                 <>
-                                  <Circle cx={toX(i, activeHistory.length)} cy={toY(p.max_price)} r={4.5} fill={colors.error} stroke={colors.background} strokeWidth={1.5} />
-                                  <Circle cx={toX(i, activeHistory.length)} cy={toY(p.min_price)} r={4.5} fill={colors.success} stroke={colors.background} strokeWidth={1.5} />
+                                  <Circle cx={toX(i, activeHistory.length)} cy={toY(p.max_price)} r={4.5} fill={colors.textMuted} stroke={colors.background} strokeWidth={1.5} />
+                                  <Circle cx={toX(i, activeHistory.length)} cy={toY(p.min_price)} r={4.5} fill={colors.textMuted} stroke={colors.background} strokeWidth={1.5} />
                                 </>
                               )}
-                              <Circle cx={toX(i, activeHistory.length)} cy={toY(p.avg_price)} r={isSel ? 6 : 4} fill={isSel ? colors.secondary : colors.surface} stroke={colors.secondary} strokeWidth={isSel ? 2.75 : 2} />
+                              {(isSel || isEndpoint) && (
+                                <Circle cx={toX(i, activeHistory.length)} cy={toY(p.avg_price)} r={isSel ? 6 : 3.5} fill={isSel ? chartLineColor : colors.surface} stroke={chartLineColor} strokeWidth={isSel ? 2.75 : 2} />
+                              )}
                             </React.Fragment>
                           );
                         })}
@@ -406,11 +405,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <View style={styles.priceStrip}>
             <View style={styles.ps}>
               <Text style={styles.psLabel}>low</Text>
-              <Text style={[styles.psVal, { color: colors.success }]}>${dataMin.toFixed(2)}</Text>
+              <Text style={styles.psVal}>${dataMin.toFixed(2)}</Text>
             </View>
             <View style={styles.ps}>
               <Text style={styles.psLabel}>avg</Text>
-              <Text style={[styles.psVal, { color: colors.primary }]}>
+              <Text style={[styles.psVal, { color: chartLineColor }]}>
                 {multiMode
                   ? (multiMeanAvg != null ? `$${multiMeanAvg.toFixed(2)}` : '—')
                   : activeHistory.length > 0
@@ -420,7 +419,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </View>
             <View style={styles.ps}>
               <Text style={styles.psLabel}>high</Text>
-              <Text style={[styles.psVal, { color: colors.secondary }]}>${dataMax.toFixed(2)}</Text>
+              <Text style={styles.psVal}>${dataMax.toFixed(2)}</Text>
             </View>
           </View>
 
@@ -446,16 +445,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           ) : (
             <View style={styles.legend}>
               <View style={styles.legendItem}>
-                <View style={[styles.legendLine, { backgroundColor: colors.error, opacity: 0.65 }]} />
-                <Text style={styles.legendText}>Max</Text>
+                <View style={styles.legendRange} />
+                <Text style={styles.legendText}>Range</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendLine, { backgroundColor: colors.secondary }]} />
-                <Text style={styles.legendText}>Avg</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendLine, { backgroundColor: colors.success, opacity: 0.65 }]} />
-                <Text style={styles.legendText}>Min</Text>
+                <View style={[styles.legendLine, { backgroundColor: chartLineColor }]} />
+                <Text style={styles.legendText}>Average</Text>
               </View>
               {showAmazonRefLine && (
                 <View style={styles.legendItem}>
@@ -483,19 +478,18 @@ const createStyles = (colors: ThemeColors) =>
     chartHead: {
       paddingHorizontal: spacing.md,
       paddingTop: spacing.md,
-      paddingBottom: spacing.xs,
+      paddingBottom: spacing.sm,
     },
     title: {
       fontSize: fontSize.sm,
-      fontWeight: '700',
+      fontWeight: '800',
       color: colors.textPrimary,
-      letterSpacing: -0.2,
+      letterSpacing: 0,
     },
-    subtitle: {
+    chartHint: {
       fontSize: fontSize.xs,
       color: colors.textMuted,
-      paddingHorizontal: spacing.md,
-      marginBottom: spacing.sm,
+      marginTop: 2,
       lineHeight: 18,
     },
     emptyChart: {
@@ -526,24 +520,23 @@ const createStyles = (colors: ThemeColors) =>
     rtab: {
       paddingHorizontal: spacing.sm + 4,
       paddingVertical: 5,
-      borderRadius: 100,
+      borderRadius: 999,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: 'transparent',
     },
     rtabActive: {
-      borderColor: colors.secondary,
-      backgroundColor: `${colors.secondary}15`,
+      borderColor: colors.accent,
+      backgroundColor: `${colors.accent}15`,
     },
     rtabText: {
-      fontSize: 9,
+      fontSize: 11,
       color: colors.textMuted,
-      letterSpacing: 1,
-      textTransform: 'lowercase',
+      letterSpacing: 0,
       fontWeight: '600',
     },
     rtabTextActive: {
-      color: colors.secondary,
+      color: colors.accent,
       fontWeight: '700',
     },
     tooltip: {
@@ -609,8 +602,8 @@ const createStyles = (colors: ThemeColors) =>
     amazonLabelText: {
       fontSize: fontSize.xs,
       fontWeight: '700',
-      color: '#FF9900',
-      backgroundColor: 'rgba(255,153,0,0.14)',
+      color: colors.warning,
+      backgroundColor: colors.warningBg,
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 6,
@@ -694,11 +687,19 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 2,
       marginRight: spacing.xs,
     },
+    legendRange: {
+      width: 18,
+      height: 10,
+      borderRadius: 4,
+      backgroundColor: colors.accent,
+      opacity: 0.18,
+      marginRight: spacing.xs,
+    },
     legendDashed: {
       width: 18,
       height: 3,
       borderRadius: 1.5,
-      backgroundColor: '#FF9900',
+      backgroundColor: colors.warning,
       marginRight: spacing.xs,
     },
     legendText: {
