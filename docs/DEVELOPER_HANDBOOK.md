@@ -8,22 +8,24 @@ Use this document as the canonical onboarding reference for the **a.iwish** mobi
 
 ## 1. Product and scope
 
-**a.iwish** ([`app.json`](../app.json)) is an Expo React Native app for a **smart wishlist** with **ML price prediction** and **multi-retailer price history**. Users pick a product on **Product Selector**, then open **Product Detail** for charts, retailer comparison, and predictions.
+**a.iwish** (`[app.json](../app.json)`) is an Expo React Native app for a **smart wishlist** with **ML price prediction** and **multi-retailer price history**. Users browse **Discover**, save items to **Watchlist**, and open **Product Detail** for editorial verdicts, price history, and retailer comparison. See `[docs/DESIGN.md](./DESIGN.md)` for the Editorial Verdict UI system.
 
-The app is **API-driven**: there is no bundled mock product catalog. All data comes from a backend implementing the contract in [`src/services/api.ts`](../src/services/api.ts).
+The app is **API-driven**: there is no bundled mock product catalog. All data comes from a backend implementing the contract in `[src/services/api.ts](../src/services/api.ts)`.
 
 ---
 
 ## 2. Technology stack
 
-| Area | Choice |
-|------|--------|
-| Runtime | Expo SDK ~54 ([`package.json`](../package.json)), React 19, React Native 0.81 |
-| Language | TypeScript (strict, [`tsconfig.json`](../tsconfig.json)) |
-| Navigation | `@react-navigation/native` + `@react-navigation/native-stack` |
-| UI | React Native core + `react-native-svg` (charts), `react-native-safe-area-context`, `react-native-gesture-handler`, `react-native-reanimated`, `react-native-screens` |
-| New Architecture | Enabled: `"newArchEnabled": true` in [`app.json`](../app.json) |
-| Web | `react-native-web` + `react-dom` (Expo web target) |
+
+| Area             | Choice                                                                                                                                                               |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime          | Expo SDK ~54 (`[package.json](../package.json)`), React 19, React Native 0.81                                                                                        |
+| Language         | TypeScript (strict, `[tsconfig.json](../tsconfig.json)`)                                                                                                             |
+| Navigation       | `@react-navigation/native` + `@react-navigation/native-stack`                                                                                                        |
+| UI               | React Native core + `react-native-svg` (charts), `react-native-safe-area-context`, `react-native-gesture-handler`, `react-native-reanimated`, `react-native-screens` |
+| New Architecture | Enabled: `"newArchEnabled": true` in `[app.json](../app.json)`                                                                                                       |
+| Web              | `react-native-web` + `react-dom` (Expo web target)                                                                                                                   |
+
 
 **Tooling in repo:** `npm run typecheck`, GitHub Actions workflow for typecheck on push/PR. **Still optional:** automated tests, EAS Build/Submit (`eas.json`).
 
@@ -31,21 +33,23 @@ The app is **API-driven**: there is no bundled mock product catalog. All data co
 
 ## 3. Repository layout (source of truth)
 
-| Path | Role |
-|------|------|
-| [`App.tsx`](../App.tsx) | `ThemeProvider` → `NavigationContainer` → stack: `ProductSelector` → `ProductDetail` |
-| [`index.ts`](../index.ts) | Expo `registerRootComponent` |
-| [`app.json`](../app.json) | Expo name, slug, icons, iOS bundle id `com.anonymous.aiwish`, Android edge-to-edge |
-| [`src/navigation/types.ts`](../src/navigation/types.ts) | `RootStackParamList`: `ProductDetail` takes `{ productId: string }` |
-| [`src/services/api.ts`](../src/services/api.ts) | All HTTP calls; base URL and endpoints |
-| [`src/types/product.ts`](../src/types/product.ts) | Shared DTOs aligned with API responses |
-| [`src/hooks/useProducts.ts`](../src/hooks/useProducts.ts) | List: `fetchProducts` + per-product `fetchProduct` enrichment |
-| [`src/hooks/useProductDetail.ts`](../src/hooks/useProductDetail.ts) | Detail: product, series, Keepa, prediction, retailers, comparison rows |
-| [`src/context/ThemeContext.tsx`](../src/context/ThemeContext.tsx) | Light/dark toggle; default **dark** |
-| [`src/styles/theme.ts`](../src/styles/theme.ts) | Colors, spacing, typography, shadows, `appIconSizes` |
-| [`src/components/`](../src/components/) | `ProductCard`, `PriceChart`, `PriceDisplay`, `RecommendationCard`, `BrandWordmark`, etc.; barrel [`index.ts`](../src/components/index.ts) |
-| [`src/utils/`](../src/utils/) | Pricing/chart logic: `trustedRetailers`, `lowestCurrentOffer`, `priceSeriesAggregate`, `keepaSeriesAggregate`, `predictionMerge`, `retailerChartColors`, etc. |
-| [`assets/`](../assets/) | App icon, splash, favicon |
+
+| Path                                                                | Role                                                                                                                                                          |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[App.tsx](../App.tsx)`                                             | Fonts + `ThemeProvider` → `NavigationContainer` → stack: `Main` (tabs) → `ProductDetail`                                                                       |
+| `[index.ts](../index.ts)`                                           | Expo `registerRootComponent`                                                                                                                                  |
+| `[app.json](../app.json)`                                           | Expo name, slug, icons, iOS bundle id `com.anonymous.aiwish`, Android edge-to-edge                                                                            |
+| `[src/navigation/types.ts](../src/navigation/types.ts)`             | `RootStackParamList`: `ProductDetail` takes `{ productId: string }`                                                                                           |
+| `[src/services/api.ts](../src/services/api.ts)`                     | All HTTP calls; base URL and endpoints                                                                                                                        |
+| `[src/types/product.ts](../src/types/product.ts)`                   | Shared DTOs aligned with API responses                                                                                                                        |
+| `[src/hooks/useProducts.ts](../src/hooks/useProducts.ts)`           | List: `fetchProducts` + per-product `fetchProduct` enrichment                                                                                                 |
+| `[src/hooks/useProductDetail.ts](../src/hooks/useProductDetail.ts)` | Detail: product, series, Keepa, prediction, retailers, comparison rows                                                                                        |
+| `[src/context/ThemeContext.tsx](../src/context/ThemeContext.tsx)`   | Appearance **system** / light / dark (`AIWISH_APPEARANCE`); resolves via `useColorScheme` when system                                                                 |
+| `[src/styles/theme.ts](../src/styles/theme.ts)`                     | Colors, spacing, typography, shadows, `appIconSizes`                                                                                                          |
+| `[src/components/](../src/components/)`                             | `EditorialProductRow`, `VerdictDisplay`, `SegmentedControl`, `PriceChart`, `BrandWordmark`, etc.; barrel `[index.ts](../src/components/index.ts)`              |
+| `[src/utils/](../src/utils/)`                                       | Pricing/chart logic: `trustedRetailers`, `lowestCurrentOffer`, `priceSeriesAggregate`, `keepaSeriesAggregate`, `predictionMerge`, `retailerChartColors`, etc. |
+| `[assets/](../assets/)`                                             | App icon, splash, favicon                                                                                                                                     |
+
 
 Generated native folders `ios/` and `android/` are gitignored (Expo prebuild workflow if you add them later).
 
@@ -93,7 +97,7 @@ Typecheck (no emit):
 npm run typecheck
 ```
 
-**Package.json scripts** ([`package.json`](../package.json)): `start`, `android`, `ios`, `web`, `typecheck`. No `lint` or `test` scripts yet.
+**Package.json scripts** (`[package.json](../package.json)`): `start`, `android`, `ios`, `web`, `typecheck`. No `lint` or `test` scripts yet.
 
 ---
 
@@ -101,7 +105,7 @@ npm run typecheck
 
 ### API base URL
 
-[`src/services/api.ts`](../src/services/api.ts) sets:
+`[src/services/api.ts](../src/services/api.ts)` sets:
 
 ```ts
 const API_BASE_URL =
@@ -111,7 +115,7 @@ const API_BASE_URL =
 - **Default:** `http://localhost:8000` (simulators/emulators on the same machine).
 - **Override:** set `EXPO_PUBLIC_API_URL` (Expo public env — embedded at bundle time; **not for secrets**).
 
-Copy [`.env.example`](../.env.example) to `.env` locally and set values. **`.env` is gitignored** — do not commit secrets. Anything `EXPO_PUBLIC_*` is visible in the client bundle.
+Copy `[.env.example](../.env.example)` to `.env` locally and set values. `**.env` is gitignored** — do not commit secrets. Anything `EXPO_PUBLIC_`* is visible in the client bundle.
 
 **Staging / production:** set `EXPO_PUBLIC_API_URL` per environment (local file, shell, or CI). For EAS builds later, use EAS environment variables in the Expo dashboard.
 
@@ -119,7 +123,7 @@ Copy [`.env.example`](../.env.example) to `.env` locally and set values. **`.env
 
 ### App identity
 
-- **Slug / name:** `aiwish`, display name `a.iwish` ([`app.json`](../app.json))
+- **Slug / name:** `aiwish`, display name `a.iwish` (`[app.json](../app.json)`)
 - **iOS bundle:** `com.anonymous.aiwish` — change before App Store release
 
 ---
@@ -128,15 +132,17 @@ Copy [`.env.example`](../.env.example) to `.env` locally and set values. **`.env
 
 All paths are relative to `API_BASE_URL`. The client uses `fetch`, expects JSON, and throws on non-OK responses with status text.
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/products` | Product list ([`ProductListResponse`](../src/types/product.ts)) |
-| GET | `/api/products/{id}` | Product detail + optional `stats` (Keepa), `prediction` summary ([`ProductDetail`](../src/types/product.ts)) |
-| GET | `/api/products/{id}/prices?months={n}&retailer={optional}` | Monthly bucketed history ([`PriceHistoryResponse`](../src/types/product.ts)) |
-| GET | `/api/products/{id}/prices/series?months={n}&limit={n}&retailer={optional}` | Raw observations ([`PriceSeriesResponse`](../src/types/product.ts)) |
-| GET | `/api/products/{id}/keepa/series?months=…&limit_per_track=…&tracks=…` | Keepa tracks ([`KeepaSeriesResponse`](../src/types/product.ts)); client defaults: 24 months, tracks `NEW,AMAZON`, `limit_per_track` 10000 ([`api.ts`](../src/services/api.ts)) |
-| GET | `/api/products/{id}/retailers` | Retailer names ([`RetailersResponse`](../src/types/product.ts)) |
-| GET | `/api/products/{id}/prediction` | ML forecast ([`PredictionResponse`](../src/types/product.ts)); app tolerates failure (null) |
+
+| Method | Path                                                                        | Purpose                                                                                                                                                                        |
+| ------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/products`                                                             | Product list (`[ProductListResponse](../src/types/product.ts)`)                                                                                                                |
+| GET    | `/api/products/{id}`                                                        | Product detail + optional `stats` (Keepa), `prediction` summary (`[ProductDetail](../src/types/product.ts)`)                                                                   |
+| GET    | `/api/products/{id}/prices?months={n}&retailer={optional}`                  | Monthly bucketed history (`[PriceHistoryResponse](../src/types/product.ts)`)                                                                                                   |
+| GET    | `/api/products/{id}/prices/series?months={n}&limit={n}&retailer={optional}` | Raw observations (`[PriceSeriesResponse](../src/types/product.ts)`)                                                                                                            |
+| GET    | `/api/products/{id}/keepa/series?months=…&limit_per_track=…&tracks=…`       | Keepa tracks (`[KeepaSeriesResponse](../src/types/product.ts)`); client defaults: 24 months, tracks `NEW,AMAZON`, `limit_per_track` 10000 (`[api.ts](../src/services/api.ts)`) |
+| GET    | `/api/products/{id}/retailers`                                              | Retailer names (`[RetailersResponse](../src/types/product.ts)`)                                                                                                                |
+| GET    | `/api/products/{id}/prediction`                                             | ML forecast (`[PredictionResponse](../src/types/product.ts)`); app tolerates failure (null)                                                                                    |
+
 
 **Backend expectations:**
 
@@ -172,6 +178,8 @@ flowchart LR
   S --> BE
 ```
 
+
+
 - **useProducts:** Loads the list, then **N parallel** `fetchProduct` calls to enrich cards (trusted price, MSRP, ratings from `stats`).
 - **useProductDetail:** Loads detail + prediction + retailers; loads **price series** + **Keepa series**; builds multi-retailer monthly series, Amazon line from Keepa when possible, fallback to aggregated raw or legacy monthly API; builds **price comparison** rows (history vs Amazon stats).
 
@@ -179,41 +187,45 @@ flowchart LR
 
 ## 9. Business rules (frontend)
 
-- **Trusted retailers** ([`src/utils/trustedRetailers.ts`](../src/utils/trustedRetailers.ts)): exact names `Walmart`, `Best Buy`, `Target`, `Amazon`, `Amazon.com`.
-- **Lowest offer on list** ([`src/utils/lowestCurrentOffer.ts`](../src/utils/lowestCurrentOffer.ts)): minimum among Keepa Amazon prices (`amazon_price`, `new_price`, `new_fba_price`) and list `current_price` when `retailer` is trusted.
-- **Amazon in price comparison** ([`useProductDetail.ts`](../src/hooks/useProductDetail.ts)): primarily from **Keepa stats** (`amazon_price` / `new_price`), not Google Shopping history.
-- **Chart / comparison sort:** “Big four” order (Walmart, Amazon, Best Buy, Target) then price — see `bigFourRank` in [`useProductDetail.ts`](../src/hooks/useProductDetail.ts).
+- **Trusted retailers** (`[src/utils/trustedRetailers.ts](../src/utils/trustedRetailers.ts)`): exact names `Walmart`, `Best Buy`, `Target`, `Amazon`, `Amazon.com`.
+- **Lowest offer on list** (`[src/utils/lowestCurrentOffer.ts](../src/utils/lowestCurrentOffer.ts)`): minimum among Keepa Amazon prices (`amazon_price`, `new_price`, `new_fba_price`) and list `current_price` when `retailer` is trusted.
+- **Amazon in price comparison** (`[useProductDetail.ts](../src/hooks/useProductDetail.ts)`): primarily from **Keepa stats** (`amazon_price` / `new_price`), not Google Shopping history.
+- **Chart / comparison sort:** “Big four” order (Walmart, Amazon, Best Buy, Target) then price — see `bigFourRank` in `[useProductDetail.ts](../src/hooks/useProductDetail.ts)`.
 
 ---
 
 ## 10. UI and theming
 
-- Global **dark/light** via [`ThemeContext`](../src/context/ThemeContext.tsx) (toggle on selector header).
-- Navigator chrome uses theme colors ([`App.tsx`](../App.tsx)).
-- Shared tokens: [`src/styles/theme.ts`](../src/styles/theme.ts) (`spacing`, `borderRadius`, `fontSize`, `shadows`, `appIconSizes`).
+- Global **dark/light** via `[ThemeContext](../src/context/ThemeContext.tsx)` (toggle on selector header).
+- Navigator chrome uses theme colors (`[App.tsx](../App.tsx)`).
+- Shared tokens: `[src/styles/theme.ts](../src/styles/theme.ts)` (`spacing`, `borderRadius`, `fontSize`, `shadows`, `appIconSizes`).
 
 ---
 
 ## 11. Future connections and gaps (roadmap)
 
-| Topic | Notes |
-|-------|-------|
-| **Production API** | Set `EXPO_PUBLIC_API_URL` per environment; use EAS env vars when EAS is added. |
-| **Auth** | No `Authorization` header in [`api.ts`](../src/services/api.ts) yet. |
-| **EAS Build / Submit** | Add `eas.json` and store credentials when distributing outside Expo Go. |
-| **Tests** | Add unit/e2e tests when product priorities allow. |
-| **Push / analytics** | Not integrated. |
-| **Deep linking** | Not configured in `app.json` beyond defaults. |
+
+| Topic                  | Notes                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| **Production API**     | Set `EXPO_PUBLIC_API_URL` per environment; use EAS env vars when EAS is added. |
+| **Auth**               | No `Authorization` header in `[api.ts](../src/services/api.ts)` yet.           |
+| **EAS Build / Submit** | Add `eas.json` and store credentials when distributing outside Expo Go.        |
+| **Tests**              | Add unit/e2e tests when product priorities allow.                              |
+| **Push / analytics**   | Not integrated.                                                                |
+| **Deep linking**       | Not configured in `app.json` beyond defaults.                                  |
+
 
 ---
 
 ## 12. Troubleshooting
 
-| Issue | What to check |
-|-------|----------------|
+
+| Issue                       | What to check                                                                       |
+| --------------------------- | ----------------------------------------------------------------------------------- |
 | Empty list / network errors | Backend running; `EXPO_PUBLIC_API_URL`; on device use host LAN IP, not `localhost`. |
-| Web CORS errors | API CORS config or dev proxy. |
-| iOS/Android build failures | Match Xcode/SDK to Expo SDK 54; run `npx expo doctor`. |
+| Web CORS errors             | API CORS config or dev proxy.                                                       |
+| iOS/Android build failures  | Match Xcode/SDK to Expo SDK 54; run `npx expo doctor`.                              |
+
 
 ---
 

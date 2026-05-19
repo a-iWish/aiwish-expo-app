@@ -1,8 +1,13 @@
 export { BrandWordmark } from './BrandWordmark';
-export { ProductCard } from './ProductCard';
-export { PriceDisplay } from './PriceDisplay';
-export { RecommendationBadge } from './RecommendationBadge';
-export { RecommendationCard } from './RecommendationCard';
+export { AppText } from './AppText';
+export { VerdictDisplay } from './VerdictDisplay';
+export { EditorialProductRow } from './EditorialProductRow';
+export { SegmentedControl } from './SegmentedControl';
+export { ScreenHeader } from './ScreenHeader';
+export { DiscoverHeader } from './DiscoverHeader';
+export { FilterChipRow } from './FilterChipRow';
+export { ProductHeroCard } from './ProductHeroCard';
+export { SkeletonEditorialRow } from './SkeletonEditorialRow';
 export { PriceChart } from './PriceChart';
 export { InfoRow } from './InfoRow';
 export { Button } from './Button';

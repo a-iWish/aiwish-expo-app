@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Path } from 'react-native-svg';
 import { useTheme } from '../context/ThemeContext';
-import { ThemeColors, spacing, borderRadius, fontSize } from '../styles/theme';
+import { ThemeColors, spacing, borderRadius, fontSize, SEMIBOLD_FONT } from '../styles/theme';
 
 interface ButtonProps {
   title: string;
@@ -92,7 +92,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     text: {
       fontSize: fontSize.md,
-      fontWeight: '700',
+      fontFamily: SEMIBOLD_FONT,
       letterSpacing: -0.3,
     },
     primaryText: {
@@ -100,7 +100,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     outlineText: {
       color: colors.brandEnd,
-      fontWeight: '500',
     },
     disabledText: {
       color: colors.textSoft,
