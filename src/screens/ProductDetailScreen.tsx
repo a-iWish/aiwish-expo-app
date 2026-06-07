@@ -1,122 +1,379 @@
-import React, { useMemo } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
-import { StackScreenProps } from '@react-navigation/stack';
-import { RootStackParamList } from '../navigation/types';
-import { mockProducts } from '../data/mockProducts';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
-  PriceDisplay,
-  RecommendationBadge,
-  RecommendationCard,
+  View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+  Pressable,
+  Linking,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { RootStackParamList } from '../navigation/types';
+import { useProductDetail } from '../hooks/useProductDetail';
+import {
   PriceChart,
-  InfoRow,
   Button,
+  AppText,
+  VerdictDisplay,
+  SegmentedControl,
+  ProductHeroCard,
 } from '../components';
+import { insightHeadline, humanizeSummary } from '../utils/copyHelpers';
 import { useTheme } from '../context/ThemeContext';
-import { ThemeColors, spacing, borderRadius, fontSize } from '../styles/theme';
+import {
+  ThemeColors,
+  spacing,
+  borderRadius,
+  appIconSizes,
+  MIN_TOUCH,
+} from '../styles/theme';
+import { lowestCurrentOffer } from '../utils/lowestCurrentOffer';
+import { mergePredictionSummary } from '../utils/predictionMerge';
+import { useWatchlist } from '../hooks/useWatchlist';
+import { buildRetailerPurchaseUrl } from '../utils/retailerPurchaseUrl';
+import { normalizeVerdict } from '../utils/verdictStyle';
 
-type Props = StackScreenProps<RootStackParamList, 'ProductDetail'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetail'>;
+type DetailSegment = 'Summary' | 'History' | 'Retailers';
+
+const SEGMENTS: DetailSegment[] = ['Summary', 'History', 'Retailers'];
 
 export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { productId } = route.params;
-  const product = mockProducts.find((p) => p.product_id === productId);
+  const [segment, setSegment] = useState<DetailSegment>('Summary');
+  const [showStickyBar, setShowStickyBar] = useState(false);
 
-  if (!product) {
+  const { productId } = route.params;
+  const {
+    product,
+    priceHistory,
+    allRetailerSeries,
+    retailers,
+    selectedRetailer,
+    selectRetailer,
+    comparisonRows,
+    prediction,
+    loading,
+    error,
+  } = useProductDetail(productId);
+
+  const { isWatched, toggle: toggleWatchlist } = useWatchlist();
+  const watched = isWatched(productId);
+
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setShowStickyBar(e.nativeEvent.contentOffset.y > 120);
+  }, []);
+
+  if (loading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Product not found</Text>
-      </View>
+      <SafeAreaView style={[styles.container, styles.centered]} edges={['top']}>
+        <Image
+          source={
+            isDark
+              ? require('../../assets/aiwish-logo-transparent-dark.png')
+              : require('../../assets/aiwish-logo-transparent-light.png')
+          }
+          style={styles.stateBrandIcon}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+        />
+        <ActivityIndicator size="large" color={colors.brandEnd} style={{ marginTop: spacing.md }} />
+        <AppText variant="caption">Loading product...</AppText>
+      </SafeAreaView>
     );
   }
 
+  if (error || !product) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centered]} edges={['top']}>
+        <AppText variant="body" style={{ color: colors.error }}>
+          {error ?? 'Product not found'}
+        </AppText>
+        <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
+      </SafeAreaView>
+    );
+  }
+
+  const headlineOffer = lowestCurrentOffer(product, product.stats ?? null);
+  const currentForHeadline = headlineOffer?.price ?? product.current_price ?? null;
+  const mergedPrediction = mergePredictionSummary(product.prediction, prediction);
+  const recKey = normalizeVerdict(
+    mergedPrediction?.recommendation ?? product.recommendation,
+  );
+  const isBuy = recKey === 'BUY';
+  const isWait = recKey === 'WAIT';
+  const confidence = mergedPrediction?.confidence ?? product.confidence ?? null;
+  const rawTitle = mergedPrediction?.title
+    ?? (isBuy ? 'Good price now' : isWait ? 'A better price may be ahead' : 'Keep watching');
+  const headline = insightHeadline(rawTitle, recKey);
+  const recommendationBody = mergedPrediction?.body
+    ?? (isBuy
+      ? 'The current price compares well against recent history.'
+      : isWait
+        ? 'The forecast suggests waiting before buying.'
+        : 'There is not enough pricing pressure for a clear buy yet.');
+  const reasons = mergedPrediction?.reasons ?? [];
+  const avgDelta =
+    product.stats?.avg_price_90d != null && currentForHeadline != null
+      ? product.stats.avg_price_90d - currentForHeadline
+      : null;
+  const historyTakeaway =
+    avgDelta != null
+      ? `Today is $${Math.abs(avgDelta).toFixed(0)} ${avgDelta > 0 ? 'below' : 'above'} the 90-day average.`
+      : product.stats?.is_lowest_90d
+        ? 'Today is near the lowest tracked price in the last 90 days.'
+        : 'Use the chart to compare recent price movement across retailers.';
+
+  const sortedRows = [...comparisonRows].sort((a, b) => {
+    if (a.price == null) return 1;
+    if (b.price == null) return -1;
+    return a.price - b.price;
+  });
+  const bestOffer = sortedRows.find((r) => r.price != null) ?? null;
+  const otherOffers = bestOffer
+    ? sortedRows.filter((row) => row !== bestOffer)
+    : sortedRows;
+  const retailerForCTA = headlineOffer?.retailer ?? product.retailer ?? 'retailer';
+
+  const handlePurchase = () => {
+    const url = buildRetailerPurchaseUrl(product.name, retailerForCTA);
+    Linking.openURL(url);
+  };
+
+  const handleWatchlist = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    toggleWatchlist(productId, currentForHeadline);
+  };
+
+  const handlePrimaryCta = () => {
+    if (isWait && !watched) {
+      handleWatchlist();
+      return;
+    }
+    handlePurchase();
+  };
+
+  const ctaTitle = isBuy
+    ? `Check price at ${retailerForCTA}`
+    : isWait
+      ? watched
+        ? `View at ${retailerForCTA}`
+        : 'Save to watchlist'
+      : watched
+        ? `View at ${retailerForCTA}`
+        : 'Save to watchlist';
+
+  const formatComparisonBasis = (item: (typeof sortedRows)[number]) => {
+    if (item.source === 'amazon') return 'Amazon price';
+    if (item.historyBasis === 'monthly_avg') return 'Monthly avg';
+    if (item.historyBasis === 'latest_observation') return 'Latest observed';
+    return 'No price data';
+  };
+
+  const effectiveMin90 =
+    product.stats?.min_price_90d != null && currentForHeadline != null
+      ? Math.min(product.stats.min_price_90d, currentForHeadline)
+      : product.stats?.min_price_90d ?? null;
+  const effectiveMax90 =
+    product.stats?.max_price_90d != null && currentForHeadline != null
+      ? Math.max(product.stats.max_price_90d, currentForHeadline)
+      : product.stats?.max_price_90d ?? null;
+
+  const summaryText = humanizeSummary(recommendationBody, reasons);
+
+  const priceSignalRows = [
+    currentForHeadline != null
+      ? { label: 'Current price', value: `$${currentForHeadline.toFixed(2)}` }
+      : null,
+    product.stats?.deal_pct != null
+      ? {
+          label: 'Deal score',
+          value: `${product.stats.deal_pct > 0 ? '+' : ''}${product.stats.deal_pct.toFixed(1)}%`,
+        }
+      : null,
+    product.stats?.avg_price_90d != null
+      ? { label: '90d average', value: `$${product.stats.avg_price_90d.toFixed(2)}` }
+      : null,
+    effectiveMin90 != null && effectiveMax90 != null
+      ? {
+          label: '90d range',
+          value: `$${effectiveMin90.toFixed(2)}–$${effectiveMax90.toFixed(2)}`,
+        }
+      : null,
+  ].filter((item): item is { label: string; value: string } => item != null);
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Product Image */}
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: product.thumbnail }} style={styles.image} />
-        {product.price_change_percentage !== null &&
-          product.price_change_percentage < 0 && (
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>
-                {product.price_change_percentage.toFixed(0)}%
-              </Text>
-            </View>
-          )}
-      </View>
-
-      {/* Product Info */}
-      <View style={styles.section}>
-        <Text style={styles.source}>{product.source}</Text>
-        <Text style={styles.title}>{product.title}</Text>
-
-        <View style={styles.priceRow}>
-          <PriceDisplay
-            currentPrice={product.extracted_price}
-            oldPrice={product.extracted_old_price}
-            changePercentage={product.price_change_percentage}
-            size="large"
-          />
-        </View>
-
-        <View style={styles.badgeRow}>
-          <RecommendationBadge
-            recommendation={product.recommendation}
-            confidence={product.recommendation_confidence}
-            size="large"
-          />
-        </View>
-      </View>
-
-      {/* ML Recommendation */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>AI Recommendation</Text>
-        <RecommendationCard product={product} />
-      </View>
-
-      {/* Price Chart */}
-      <View style={styles.section}>
-        <PriceChart priceHistory={product.price_history} />
-      </View>
-
-      {/* Product Details */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Product Details</Text>
-        <View style={styles.detailsCard}>
-          <InfoRow label="Category" value={product.category} icon="📦" />
-          <InfoRow label="Retailer" value={product.source} icon="🏪" />
-          <InfoRow
-            label="Rating"
-            value={`${product.rating} ★ (${product.reviews.toLocaleString()} reviews)`}
-            icon="⭐"
-          />
-          <InfoRow label="Delivery" value={product.delivery} icon="🚚" />
-          <InfoRow
-            label="Position"
-            value={`#${product.position} in search results`}
-            icon="📊"
-          />
-          <InfoRow
-            label="Data Points"
-            value={`${product.price_history.length} price observations`}
-            icon="📈"
-          />
-        </View>
-      </View>
-
-      {/* Action Buttons */}
-      <View style={styles.actions}>
-        <Button
-          title="Back to Products"
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.nav}>
+        <Pressable
           onPress={() => navigation.goBack()}
-          variant="outline"
-        />
+          style={styles.navBtn}
+          hitSlop={12}
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.brandEnd} />
+        </Pressable>
+        <Pressable
+          onPress={handleWatchlist}
+          style={styles.navBtn}
+          hitSlop={12}
+          accessibilityLabel={watched ? 'Remove from watchlist' : 'Add to watchlist'}
+        >
+          <Ionicons
+            name={watched ? 'heart' : 'heart-outline'}
+            size={24}
+            color={watched ? colors.brandStart : colors.textSoft}
+          />
+        </Pressable>
       </View>
-    </ScrollView>
+
+      {showStickyBar && (
+        <View style={styles.stickyBar}>
+          <AppText variant="bodySemibold" style={styles.stickyText}>
+            {recKey ?? '···'}
+            {confidence != null ? ` · ${Math.round(confidence)}%` : ''}
+          </AppText>
+        </View>
+      )}
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
+        <Animated.View entering={FadeInUp.duration(500)}>
+          <VerdictDisplay
+            recommendation={mergedPrediction?.recommendation ?? product.recommendation}
+            confidence={confidence}
+            size="detail"
+          />
+        </Animated.View>
+
+        <Animated.View entering={FadeInUp.delay(80).duration(500)} style={styles.heroWrap}>
+          <ProductHeroCard
+            product={product}
+            price={currentForHeadline}
+            retailer={retailerForCTA}
+            category={product.category}
+          />
+        </Animated.View>
+
+        {headline ? (
+          <AppText variant="bodySemibold" style={styles.insightHeadline}>
+            {headline}
+          </AppText>
+        ) : null}
+
+        <View style={styles.ctaWrap}>
+          <Button title={ctaTitle} onPress={handlePrimaryCta} />
+        </View>
+
+        <View style={styles.segmentWrap}>
+          <SegmentedControl
+            options={SEGMENTS}
+            value={segment}
+            onChange={setSegment}
+          />
+        </View>
+
+        {segment === 'Summary' && (
+          <View style={styles.segmentBody}>
+            <AppText variant="body">{summaryText}</AppText>
+            {reasons.length > 1 && (
+              <View style={styles.reasons}>
+                {reasons.slice(1, 4).map((r, i) => (
+                  <AppText key={i} variant="caption" style={styles.reasonLine}>
+                    {r}
+                  </AppText>
+                ))}
+              </View>
+            )}
+            {mergedPrediction?.model_name && (
+              <AppText variant="meta" style={styles.modelLine}>
+                Model · {mergedPrediction.model_name} · {product.data_points_count.toLocaleString()} points
+              </AppText>
+            )}
+            {priceSignalRows.length > 0 && (
+              <View style={styles.signalBlock}>
+                <AppText variant="meta" style={styles.blockLabel}>
+                  Price evidence
+                </AppText>
+                {priceSignalRows.map((row) => (
+                  <View key={row.label} style={styles.signalRow}>
+                    <AppText variant="caption">{row.label}</AppText>
+                    <AppText variant="bodySemibold">{row.value}</AppText>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {segment === 'History' && (
+          <View style={styles.segmentBody}>
+            <AppText variant="title" style={styles.sectionTitle}>
+              Price history
+            </AppText>
+            <AppText variant="caption" style={styles.sectionCopy}>
+              {historyTakeaway}
+            </AppText>
+            <PriceChart
+              priceHistory={priceHistory}
+              allRetailerSeries={allRetailerSeries}
+              retailers={retailers}
+              selectedRetailer={selectedRetailer}
+              onRetailerChange={selectRetailer}
+            />
+          </View>
+        )}
+
+        {segment === 'Retailers' && (
+          <View style={styles.segmentBody}>
+            <AppText variant="title" style={styles.sectionTitle}>
+              Retailers
+            </AppText>
+            {bestOffer && (
+              <View style={styles.bestOffer}>
+                <View>
+                  <AppText variant="meta">Best offer</AppText>
+                  <AppText variant="bodySemibold">{bestOffer.retailer}</AppText>
+                  <AppText variant="caption">{formatComparisonBasis(bestOffer)}</AppText>
+                </View>
+                <AppText variant="price" style={styles.offerPrice}>
+                  ${bestOffer.price!.toFixed(2)}
+                </AppText>
+              </View>
+            )}
+            {otherOffers.map((item) => (
+              <View key={`${item.source}-${item.retailer}`} style={styles.offerRow}>
+                <View style={styles.offerCopy}>
+                  <AppText variant="bodySemibold">{item.retailer}</AppText>
+                  <AppText variant="caption">{formatComparisonBasis(item)}</AppText>
+                </View>
+                <AppText variant="price" style={styles.offerPriceSmall}>
+                  {item.price != null ? `$${item.price.toFixed(2)}` : '—'}
+                </AppText>
+              </View>
+            ))}
+            {sortedRows.length === 0 && (
+              <AppText variant="caption">No retailer comparison data yet.</AppText>
+            )}
+          </View>
+        )}
+
+        <View style={{ height: spacing.xxl }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -126,77 +383,121 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
       backgroundColor: colors.background,
     },
-    content: {
-      paddingBottom: spacing.xxl,
-    },
-    errorText: {
-      color: colors.error,
-      fontSize: fontSize.lg,
-      textAlign: 'center',
-      marginTop: spacing.xxl,
-    },
-    imageContainer: {
+    centered: {
       alignItems: 'center',
-      paddingVertical: spacing.lg,
-      backgroundColor: colors.surface,
-      position: 'relative',
+      justifyContent: 'center',
+      padding: spacing.lg,
+      gap: spacing.md,
     },
-    image: {
-      width: 200,
-      height: 200,
-      borderRadius: borderRadius.md,
+    stateBrandIcon: {
+      width: appIconSizes.state,
+      height: appIconSizes.state,
     },
-    discountBadge: {
-      position: 'absolute',
-      top: spacing.md,
-      right: spacing.md,
-      backgroundColor: colors.success,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
-      borderRadius: borderRadius.sm,
-    },
-    discountText: {
-      color: colors.white,
-      fontSize: fontSize.sm,
-      fontWeight: '700',
-    },
-    section: {
+    nav: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    navBtn: {
+      minWidth: MIN_TOUCH,
+      minHeight: MIN_TOUCH,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    stickyBar: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.hairline,
+      backgroundColor: colors.surface,
+      minHeight: MIN_TOUCH,
+      justifyContent: 'center',
+    },
+    stickyText: {
+      letterSpacing: 0.2,
+    },
+    scroll: { flex: 1 },
+    scrollContent: {
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+    },
+    heroWrap: {
       marginTop: spacing.lg,
+    },
+    insightHeadline: {
+      marginTop: spacing.md,
+      lineHeight: 22,
+    },
+    ctaWrap: {
+      marginTop: spacing.md,
+    },
+    offerPrice: {
+      fontSize: 22,
+    },
+    offerPriceSmall: {
+      fontSize: 18,
+    },
+    segmentWrap: {
+      marginTop: spacing.lg,
+    },
+    segmentBody: {
+      marginTop: spacing.md,
+      gap: spacing.md,
+    },
+    reasons: {
+      gap: spacing.xs,
+      marginTop: spacing.sm,
+    },
+    reasonLine: {
+      lineHeight: 20,
+    },
+    modelLine: {
+      marginTop: spacing.sm,
+    },
+    signalBlock: {
+      marginTop: spacing.md,
+      paddingTop: spacing.md,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.hairline,
+      gap: spacing.sm,
+    },
+    blockLabel: {
+      marginBottom: spacing.xs,
+    },
+    signalRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
     },
     sectionTitle: {
-      fontSize: fontSize.lg,
-      fontWeight: '700',
-      color: colors.textPrimary,
-      marginBottom: spacing.md,
+      fontSize: 24,
+      letterSpacing: -0.5,
     },
-    source: {
-      fontSize: fontSize.xs,
-      color: colors.primary,
-      fontWeight: '600',
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
+    sectionCopy: {
+      marginBottom: spacing.sm,
     },
-    title: {
-      fontSize: fontSize.xl,
-      fontWeight: '700',
-      color: colors.textPrimary,
-      marginTop: spacing.xs,
-    },
-    priceRow: {
-      marginTop: spacing.md,
-    },
-    badgeRow: {
+    bestOffer: {
       flexDirection: 'row',
-      marginTop: spacing.md,
-    },
-    detailsCard: {
-      backgroundColor: colors.surface,
-      borderRadius: borderRadius.lg,
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
       padding: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
-    actions: {
-      paddingHorizontal: spacing.md,
-      marginTop: spacing.lg,
+    offerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.hairline,
+    },
+    offerCopy: {
+      flex: 1,
+      gap: 2,
     },
   });

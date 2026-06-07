@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { spacing, fontSize } from '../styles/theme';
+import { MONO_FONT } from '../styles/theme';
 
 interface RecommendationBadgeProps {
-  recommendation: 'BUY' | 'WAIT' | 'ANALYZING';
-  confidence: number;
+  recommendation: string | null;
+  confidence: number | null;
   size?: 'small' | 'large';
 }
 
@@ -16,22 +16,84 @@ export const RecommendationBadge: React.FC<RecommendationBadgeProps> = ({
 }) => {
   const { colors } = useTheme();
   const isLarge = size === 'large';
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
-  const config = {
-    BUY: { label: 'BUY NOW', color: colors.success, bgColor: 'rgba(34, 197, 94, 0.15)' },
-    WAIT: { label: 'WAIT', color: colors.warning, bgColor: 'rgba(245, 158, 11, 0.15)' },
-    ANALYZING: { label: 'ANALYZING', color: colors.textMuted, bgColor: 'rgba(100, 116, 139, 0.15)' },
-  }[recommendation];
+  const key = recommendation?.toUpperCase() ?? 'ANALYZING';
+  const isAnalyzing = key !== 'BUY' && key !== 'WAIT';
+
+  useEffect(() => {
+    if (!isAnalyzing) return;
+    const loop = Animated.loop(
+      Animated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 2000,
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isAnalyzing, shimmerAnim]);
+
+  const shimmerTranslate = shimmerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-80, 200],
+  });
+
+  const cfg = useMemo(() => {
+    if (key === 'BUY') {
+      return {
+        label: 'Buy Now',
+        color: colors.success,
+        bg: colors.successBg,
+        border: colors.successBorder,
+      };
+    }
+    if (key === 'WAIT') {
+      return {
+        label: 'Wait',
+        color: colors.warning,
+        bg: colors.warningBg,
+        border: colors.warningBorder,
+      };
+    }
+    return {
+      label: 'Analyzing',
+      color: colors.textSoft,
+      bg: colors.surface,
+      border: colors.border,
+    };
+  }, [key, colors]);
 
   return (
-    <View style={[styles.badge, { backgroundColor: config.bgColor }, isLarge && styles.badgeLarge]}>
-      <Text style={[styles.label, { color: config.color }, isLarge && styles.labelLarge]}>
-        {config.label}
+    <View
+      style={[
+        styles.badge,
+        { backgroundColor: cfg.bg, borderColor: cfg.border, overflow: 'hidden' },
+        isLarge && styles.badgeLarge,
+      ]}
+    >
+      <Text
+        style={[
+          styles.label,
+          { color: cfg.color, fontFamily:'Roboto' },
+          isLarge && styles.labelLarge,
+        ]}
+      >
+        {cfg.label}
       </Text>
-      {confidence > 0 && (
-        <Text style={[styles.confidence, { color: config.color }]}>
-          {confidence}%
+      {confidence != null && confidence > 0 && (
+        <Text style={[styles.confidence, { color: cfg.color, fontFamily:'Roboto' }]}>
+          {'  '}{confidence}%
         </Text>
+      )}
+      {isAnalyzing && (
+        <Animated.View
+          style={[
+            styles.shimmer,
+            { transform: [{ translateX: shimmerTranslate }] },
+          ]}
+          pointerEvents="none"
+        />
       )}
     </View>
   );
@@ -41,25 +103,35 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    position: 'relative',
   },
   badgeLarge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   label: {
-    fontSize: fontSize.xs,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
   labelLarge: {
-    fontSize: fontSize.md,
+    fontSize: 12,
   },
   confidence: {
-    marginLeft: 4,
-    fontSize: fontSize.xs,
+    fontSize: 10,
     fontWeight: '500',
+    letterSpacing: 0.5,
+  },
+  shimmer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 60,
+    backgroundColor: 'rgba(157,78,221,0.2)',
   },
 });

@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Stop, Path } from 'react-native-svg';
 import { useTheme } from '../context/ThemeContext';
-import { ThemeColors, spacing, borderRadius, fontSize } from '../styles/theme';
+import { ThemeColors, spacing, borderRadius, fontSize, SEMIBOLD_FONT } from '../styles/theme';
 
 interface ButtonProps {
   title: string;
@@ -22,25 +23,40 @@ export const Button: React.FC<ButtonProps> = ({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const isPrimary = variant === 'primary';
 
+  if (isPrimary) {
+    return (
+      <TouchableOpacity
+        style={[styles.primaryWrap, disabled && styles.disabled, style]}
+        onPress={onPress}
+        disabled={disabled}
+        activeOpacity={0.8}
+      >
+        <View style={styles.primaryInner}>
+          <Svg width="100%" height="100%" style={StyleSheet.absoluteFillObject}>
+            <Defs>
+              <LinearGradient id="btnGrad" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0%" stopColor={colors.brandEnd} />
+                <Stop offset="100%" stopColor={colors.brandStart} />
+              </LinearGradient>
+            </Defs>
+            <Path d="M0 0 H9999 V9999 H0 Z" fill="url(#btnGrad)" />
+          </Svg>
+          <Text style={[styles.text, styles.primaryText, disabled && styles.disabledText]}>
+            {title}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <TouchableOpacity
-      style={[
-        styles.button,
-        isPrimary ? styles.primary : styles.outline,
-        disabled && styles.disabled,
-        style,
-      ]}
+      style={[styles.button, styles.outline, disabled && styles.disabled, style]}
       onPress={onPress}
       disabled={disabled}
       activeOpacity={0.8}
     >
-      <Text
-        style={[
-          styles.text,
-          isPrimary ? styles.primaryText : styles.outlineText,
-          disabled && styles.disabledText,
-        ]}
-      >
+      <Text style={[styles.text, styles.outlineText, disabled && styles.disabledText]}>
         {title}
       </Text>
     </TouchableOpacity>
@@ -52,32 +68,40 @@ const createStyles = (colors: ThemeColors) =>
     button: {
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.lg,
-      borderRadius: borderRadius.lg,
+      borderRadius: borderRadius.button,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    primary: {
-      backgroundColor: colors.primary,
+    primaryWrap: {
+      height: 52,
+      borderRadius: borderRadius.button,
+      overflow: 'hidden',
+    },
+    primaryInner: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     outline: {
       backgroundColor: 'transparent',
-      borderWidth: 2,
-      borderColor: colors.primary,
+      borderWidth: 1.5,
+      borderColor: colors.brandEnd,
     },
     disabled: {
-      opacity: 0.5,
+      opacity: 0.45,
     },
     text: {
       fontSize: fontSize.md,
-      fontWeight: '700',
+      fontFamily: SEMIBOLD_FONT,
+      letterSpacing: -0.3,
     },
     primaryText: {
       color: colors.white,
     },
     outlineText: {
-      color: colors.primary,
+      color: colors.brandEnd,
     },
     disabledText: {
-      color: colors.textMuted,
+      color: colors.textSoft,
     },
   });

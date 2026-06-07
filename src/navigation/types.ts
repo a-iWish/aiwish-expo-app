@@ -1,4 +1,10 @@
 export type RootStackParamList = {
-  ProductSelector: undefined;
+  Main: undefined;
   ProductDetail: { productId: string };
+};
+
+export type MainTabParamList = {
+  Discover: undefined;
+  Watchlist: undefined;
+  Settings: undefined;
 };
