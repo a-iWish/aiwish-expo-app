@@ -13,7 +13,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { useProducts } from '../hooks/useProducts';
 import { Product } from '../types/product';
-import { EditorialProductRow, AppText } from '../components';
+import { EditorialProductRow, AppText, SearchBar } from '../components';
 import { DiscoverHeader } from '../components/DiscoverHeader';
 import { FilterChipRow } from '../components/FilterChipRow';
 import { SkeletonEditorialRow } from '../components/SkeletonEditorialRow';
@@ -48,6 +48,7 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('verdict');
+  const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const { products, loading, error, refetch } = useProducts();
 
@@ -86,6 +87,16 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
         ? products.filter((p) => p.category === selectedCategory)
         : [...products];
 
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.category ?? '').toLowerCase().includes(q) ||
+          (p.retailer ?? '').toLowerCase().includes(q),
+      );
+    }
+
     if (sortMode === 'verdict') {
       list.sort((a, b) => {
         const ak = normalizeVerdict(a.recommendation) ?? 'HOLD';
@@ -105,7 +116,7 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     return list;
-  }, [products, selectedCategory, sortMode]);
+  }, [products, selectedCategory, sortMode, query]);
 
   const handleProductPress = useCallback(
     (product: Product) => {
@@ -136,6 +147,7 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
         />
         {!loading && !error && (
           <View style={styles.filters}>
+            <SearchBar value={query} onChange={setQuery} />
             <FilterChipRow
               label="Category"
               chips={categoryChips}
@@ -165,6 +177,7 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
       sortChips,
       selectedCategory,
       sortMode,
+      query,
       styles.filters,
     ],
   );
@@ -197,6 +210,8 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           ListHeaderComponent={listHeader}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
           refreshControl={

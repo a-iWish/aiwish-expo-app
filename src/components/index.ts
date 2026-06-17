@@ -6,6 +6,7 @@ export { SegmentedControl } from './SegmentedControl';
 export { ScreenHeader } from './ScreenHeader';
 export { DiscoverHeader } from './DiscoverHeader';
 export { FilterChipRow } from './FilterChipRow';
+export { SearchBar } from './SearchBar';
 export { ProductHeroCard } from './ProductHeroCard';
 export { SkeletonEditorialRow } from './SkeletonEditorialRow';
 export { PriceChart } from './PriceChart';
