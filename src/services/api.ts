@@ -7,9 +7,7 @@ import {
   PredictionResponse,
   RetailersResponse,
 } from '../types/product';
-
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '') ?? 'http://localhost:8000';
+import { apiFetch } from './httpClient';
 
 function normalizeRecommendation(rec: unknown): string {
   const v = String(rec ?? '').trim().toLowerCase();
@@ -49,13 +47,9 @@ function normalizePredictionResponse(raw: any): PredictionResponse {
   };
 }
 
-async function request<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`);
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`${res.status} ${res.statusText}: ${text}`);
-  }
-  return res.json() as Promise<T>;
+function request<T>(path: string): Promise<T> {
+  // Product endpoints are public; auth is optional so we skip token attachment.
+  return apiFetch<T>(path, { method: 'GET', auth: false });
 }
 
 export function fetchProducts(): Promise<ProductListResponse> {
