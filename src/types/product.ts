@@ -140,6 +140,18 @@ export interface ForecastPoint {
   upper: number;
 }
 
+/** One saved wishlist entry from GET /api/wishlist. */
+export interface WishlistItem {
+  product_id: string;
+  saved_price?: number | null;
+  created_at: string;
+}
+
+export interface WishlistResponse {
+  items: WishlistItem[];
+  count: number;
+}
+
 export interface PredictionResponse {
   product_id: string;
   model_name: string;

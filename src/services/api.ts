@@ -6,6 +6,8 @@ import {
   KeepaSeriesResponse,
   PredictionResponse,
   RetailersResponse,
+  WishlistItem,
+  WishlistResponse,
 } from '../types/product';
 import { apiFetch } from './httpClient';
 
@@ -116,5 +118,29 @@ export function fetchPrediction(
   return request<any>(`/api/products/${id}/prediction`).then((raw) => {
     if (!raw) return null;
     return normalizePredictionResponse(raw);
+  });
+}
+
+// --- Wishlist (per-user, requires auth; apiFetch attaches the Bearer token) --- //
+
+export function fetchWishlist(): Promise<WishlistResponse> {
+  return apiFetch<WishlistResponse>('/api/wishlist', { method: 'GET', auth: true });
+}
+
+export function addToWishlist(
+  productId: string,
+  savedPrice?: number | null,
+): Promise<WishlistItem> {
+  return apiFetch<WishlistItem>('/api/wishlist', {
+    method: 'POST',
+    auth: true,
+    body: { product_id: productId, saved_price: savedPrice ?? null },
+  });
+}
+
+export function removeFromWishlist(productId: string): Promise<void> {
+  return apiFetch<void>(`/api/wishlist/${productId}`, {
+    method: 'DELETE',
+    auth: true,
   });
 }
