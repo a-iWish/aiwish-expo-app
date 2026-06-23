@@ -2,7 +2,10 @@ import React, { useMemo } from 'react';
 import { View, StyleSheet, Image } from 'react-native';
 import { AppText } from './AppText';
 import { BrandWordmark } from './BrandWordmark';
+import { AccountButton } from './AccountButton';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { firstName } from '../utils/userName';
 import { ThemeColors, spacing } from '../styles/theme';
 
 interface ScreenHeaderProps {
@@ -17,25 +20,38 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   subtitle,
 }) => {
   const { colors, isDark } = useTheme();
+  const { isAuthenticated, user } = useAuth();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.wrap}>
-      {showBrand && (
-        <View style={styles.brandRow}>
-          <Image
-            source={
-              isDark
-                ? require('../../assets/aiwish-logo-transparent-dark.png')
-                : require('../../assets/aiwish-logo-transparent-light.png')
-            }
-            style={styles.logo}
-            resizeMode="contain"
-            accessibilityIgnoresInvertColors
-          />
-          <BrandWordmark textStyle={styles.wordmark} iwishColor={colors.brandEnd} />
-        </View>
+      <View style={styles.topRow}>
+        {showBrand ? (
+          <View style={styles.brandRow}>
+            <Image
+              source={
+                isDark
+                  ? require('../../assets/aiwish-logo-transparent-dark.png')
+                  : require('../../assets/aiwish-logo-transparent-light.png')
+              }
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityIgnoresInvertColors
+            />
+            <BrandWordmark textStyle={styles.wordmark} iwishColor={colors.brandEnd} />
+          </View>
+        ) : (
+          <View style={styles.flexSpacer} />
+        )}
+        <AccountButton />
+      </View>
+
+      {isAuthenticated && (
+        <AppText variant="meta" style={styles.greeting}>
+          Welcome back, {firstName(user?.full_name, user?.email)}
+        </AppText>
       )}
+
       <AppText variant="displayList" style={styles.title}>
         {title}
       </AppText>
@@ -56,11 +72,19 @@ const createStyles = (colors: ThemeColors) =>
       paddingBottom: spacing.md,
       backgroundColor: colors.headerBg,
     },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: spacing.sm,
+    },
+    flexSpacer: {
+      flex: 1,
+    },
     brandRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,
-      marginBottom: spacing.sm,
     },
     logo: {
       width: 36,
@@ -68,6 +92,10 @@ const createStyles = (colors: ThemeColors) =>
     },
     wordmark: {
       fontSize: 22,
+    },
+    greeting: {
+      color: colors.brandEnd,
+      marginBottom: spacing.xs,
     },
     title: {
       fontSize: 34,
