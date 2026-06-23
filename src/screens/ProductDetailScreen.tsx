@@ -37,6 +37,7 @@ import {
 import { lowestCurrentOffer } from '../utils/lowestCurrentOffer';
 import { mergePredictionSummary } from '../utils/predictionMerge';
 import { useWatchlist } from '../hooks/useWatchlist';
+import { useAuth } from '../context/AuthContext';
 import { buildRetailerPurchaseUrl } from '../utils/retailerPurchaseUrl';
 import { normalizeVerdict } from '../utils/verdictStyle';
 
@@ -66,6 +67,7 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   } = useProductDetail(productId);
 
   const { isWatched, toggle: toggleWatchlist } = useWatchlist();
+  const { isAuthenticated } = useAuth();
   const watched = isWatched(productId);
 
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -150,6 +152,11 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
   const handleWatchlist = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (!isAuthenticated) {
+      // Saving requires an account — send guests to sign in / register.
+      navigation.navigate('Login');
+      return;
+    }
     toggleWatchlist(productId, currentForHeadline);
   };
 
