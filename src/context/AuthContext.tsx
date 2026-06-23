@@ -21,6 +21,7 @@ import {
   registerSessionCallbacks,
   setSessionTokens,
 } from '../services/session';
+import { ApiError } from '../services/httpClient';
 import { saveTokens, loadTokens, clearTokens } from '../lib/tokenStorage';
 import { AuthResponse, AuthTokens, User } from '../types/auth';
 
@@ -101,10 +102,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const me = await fetchMe();
         setUser(me);
         setStatus('authenticated');
-      } catch {
-        await clearTokens();
-        setSessionTokens(null);
-        setStatus('unauthenticated');
+      } catch (err) {
+        const rejected =
+          err instanceof ApiError && (err.status === 401 || err.status === 403);
+        if (rejected) {
+          await clearTokens();
+          setSessionTokens(null);
+          setStatus('unauthenticated');
+        } else {
+          setStatus('authenticated');
+        }
       }
     })();
   }, []);
