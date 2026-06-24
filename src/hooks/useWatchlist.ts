@@ -7,6 +7,8 @@ const META_KEY = 'AIWISH_WATCHLIST_META';
 export interface WatchlistMeta {
   savedAt: string;
   savedPrice: number | null;
+  /** User's "need it by" date (ISO yyyy-mm-dd). Drives deadline-aware predictions. */
+  deadline?: string | null;
 }
 
 export type WatchlistMetaMap = Record<string, WatchlistMeta>;
@@ -48,7 +50,7 @@ export function useWatchlist() {
   }, []);
 
   const add = useCallback(
-    (id: string, savedPrice?: number | null) => {
+    (id: string, savedPrice?: number | null, deadline?: string | null) => {
       setIds((prev) => {
         if (prev.includes(id)) return prev;
         const next = [...prev, id];
@@ -59,8 +61,9 @@ export function useWatchlist() {
         const next = {
           ...prev,
           [id]: {
-            savedAt: new Date().toISOString(),
-            savedPrice: savedPrice ?? null,
+            savedAt: prev[id]?.savedAt ?? new Date().toISOString(),
+            savedPrice: savedPrice ?? prev[id]?.savedPrice ?? null,
+            deadline: deadline ?? prev[id]?.deadline ?? null,
           },
         };
         AsyncStorage.setItem(META_KEY, JSON.stringify(next));
@@ -69,6 +72,28 @@ export function useWatchlist() {
     },
     [],
   );
+
+  /** Set/clear the "need it by" date for an already-saved (or newly saved) item. */
+  const setDeadline = useCallback((id: string, deadline: string | null) => {
+    setIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const next = [...prev, id];
+      AsyncStorage.setItem(IDS_KEY, JSON.stringify(next));
+      return next;
+    });
+    setMeta((prev) => {
+      const next = {
+        ...prev,
+        [id]: {
+          savedAt: prev[id]?.savedAt ?? new Date().toISOString(),
+          savedPrice: prev[id]?.savedPrice ?? null,
+          deadline,
+        },
+      };
+      AsyncStorage.setItem(META_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   const remove = useCallback((id: string) => {
     setIds((prev) => {
@@ -102,6 +127,7 @@ export function useWatchlist() {
           nextMeta[id] = {
             savedAt: new Date().toISOString(),
             savedPrice: savedPrice ?? null,
+            deadline: prevMeta[id]?.deadline ?? null,
           };
         }
         AsyncStorage.setItem(META_KEY, JSON.stringify(nextMeta));
@@ -118,6 +144,7 @@ export function useWatchlist() {
     add,
     remove,
     toggle,
+    setDeadline,
     isWatched,
     getMeta,
     persist: persistIds,

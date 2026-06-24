@@ -45,6 +45,9 @@ export interface KeepaStats {
   rank_drops_90d?: number | null;
 }
 
+/** How close the user's "need it by" date is. */
+export type DeadlineUrgency = 'ok' | 'tight' | 'passed';
+
 export interface PredictionSummary {
   model_name: string;
   recommendation: string;
@@ -57,6 +60,11 @@ export interface PredictionSummary {
   estimated_best_price?: number | null;
   estimated_wait_days?: number | null;
   reasons: string[];
+  // Deadline-aware fields — present only when a "need it by" date was sent.
+  deadline?: string | null;
+  days_until_deadline?: number | null;
+  deadline_urgency?: DeadlineUrgency | null;
+  deadline_adjusted?: boolean;
 }
 
 export interface ProductDetail extends Product {
@@ -157,4 +165,9 @@ export interface PredictionResponse {
   estimated_best_price?: number | null;
   estimated_wait_days?: number | null;
   reasons: string[];
+  // Deadline-aware fields — present only when ?deadline= was sent.
+  deadline?: string | null;
+  days_until_deadline?: number | null;
+  deadline_urgency?: DeadlineUrgency | null;
+  deadline_adjusted?: boolean;
 }

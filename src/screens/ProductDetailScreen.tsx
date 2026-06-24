@@ -24,6 +24,7 @@ import {
   VerdictDisplay,
   SegmentedControl,
   ProductHeroCard,
+  DeadlinePickerModal,
 } from '../components';
 import { insightHeadline, humanizeSummary } from '../utils/copyHelpers';
 import { useTheme } from '../context/ThemeContext';
@@ -39,6 +40,7 @@ import { mergePredictionSummary } from '../utils/predictionMerge';
 import { useWatchlist } from '../hooks/useWatchlist';
 import { buildRetailerPurchaseUrl } from '../utils/retailerPurchaseUrl';
 import { normalizeVerdict } from '../utils/verdictStyle';
+import { formatDeadline, urgencyLabel } from '../utils/deadlineFormat';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetail'>;
 type DetailSegment = 'Summary' | 'History' | 'Retailers';
@@ -52,6 +54,12 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [showStickyBar, setShowStickyBar] = useState(false);
 
   const { productId } = route.params;
+
+  const { isWatched, toggle: toggleWatchlist, getMeta, setDeadline } = useWatchlist();
+  const watched = isWatched(productId);
+  const savedDeadline = getMeta(productId)?.deadline ?? null;
+  const [pickerVisible, setPickerVisible] = useState(false);
+
   const {
     product,
     priceHistory,
@@ -63,10 +71,7 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     prediction,
     loading,
     error,
-  } = useProductDetail(productId);
-
-  const { isWatched, toggle: toggleWatchlist } = useWatchlist();
-  const watched = isWatched(productId);
+  } = useProductDetail(productId, savedDeadline);
 
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     setShowStickyBar(e.nativeEvent.contentOffset.y > 120);
@@ -121,6 +126,15 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         ? 'The forecast suggests waiting before buying.'
         : 'There is not enough pricing pressure for a clear buy yet.');
   const reasons = mergedPrediction?.reasons ?? [];
+  const deadlineUrgency = mergedPrediction?.deadline_urgency ?? null;
+  const daysLeft = mergedPrediction?.days_until_deadline ?? null;
+  const deadlineAdjusted = mergedPrediction?.deadline_adjusted ?? false;
+  const urgencyColor =
+    deadlineUrgency === 'passed'
+      ? colors.error
+      : deadlineUrgency === 'tight'
+        ? colors.warning
+        : colors.success;
   const avgDelta =
     product.stats?.avg_price_90d != null && currentForHeadline != null
       ? product.stats.avg_price_90d - currentForHeadline
@@ -150,7 +164,10 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
   const handleWatchlist = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const wasWatched = watched;
     toggleWatchlist(productId, currentForHeadline);
+    // When adding (not removing), prompt for an optional "need it by" date.
+    if (!wasWatched) setPickerVisible(true);
   };
 
   const handlePrimaryCta = () => {
@@ -274,6 +291,42 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
           </AppText>
         ) : null}
 
+        {deadlineAdjusted ? (
+          <AppText variant="caption" style={[styles.adjustedNote, { color: urgencyColor }]}>
+            Adjusted for your deadline
+          </AppText>
+        ) : null}
+
+        {watched ? (
+          <Pressable
+            onPress={() => setPickerVisible(true)}
+            style={styles.deadlineChip}
+            accessibilityLabel={savedDeadline ? 'Edit need-by date' : 'Add a need-by date'}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={16}
+              color={savedDeadline ? colors.brandEnd : colors.textSoft}
+            />
+            {savedDeadline ? (
+              <>
+                <AppText variant="bodySemibold" style={styles.deadlineText}>
+                  Need it by {formatDeadline(savedDeadline)}
+                </AppText>
+                {urgencyLabel(deadlineUrgency, daysLeft) ? (
+                  <AppText variant="caption" style={{ color: urgencyColor }}>
+                    · {urgencyLabel(deadlineUrgency, daysLeft)}
+                  </AppText>
+                ) : null}
+              </>
+            ) : (
+              <AppText variant="bodySemibold" style={{ color: colors.textSoft }}>
+                Add a “need it by” date
+              </AppText>
+            )}
+          </Pressable>
+        ) : null}
+
         <View style={styles.ctaWrap}>
           <Button title={ctaTitle} onPress={handlePrimaryCta} />
         </View>
@@ -373,6 +426,20 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
+
+      <DeadlinePickerModal
+        visible={pickerVisible}
+        initialDate={savedDeadline}
+        onConfirm={(iso) => {
+          setDeadline(productId, iso);
+          setPickerVisible(false);
+        }}
+        onClear={() => {
+          setDeadline(productId, null);
+          setPickerVisible(false);
+        }}
+        onCancel={() => setPickerVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -429,6 +496,26 @@ const createStyles = (colors: ThemeColors) =>
     insightHeadline: {
       marginTop: spacing.md,
       lineHeight: 22,
+    },
+    adjustedNote: {
+      marginTop: spacing.xs,
+      fontStyle: 'italic',
+    },
+    deadlineChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.hairline,
+      alignSelf: 'flex-start',
+    },
+    deadlineText: {
+      letterSpacing: 0.1,
     },
     ctaWrap: {
       marginTop: spacing.md,

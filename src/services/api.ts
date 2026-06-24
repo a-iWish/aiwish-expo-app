@@ -44,6 +44,10 @@ function normalizePredictionResponse(raw: any): PredictionResponse {
     estimated_best_price: raw?.estimated_best_price ?? raw?.estimatedBestPrice ?? null,
     estimated_wait_days: raw?.estimated_wait_days ?? raw?.estimatedWaitDays ?? null,
     reasons: Array.isArray(reasons) ? reasons.map((r: any) => String(r)) : [],
+    deadline: raw?.deadline ?? null,
+    days_until_deadline: raw?.days_until_deadline ?? raw?.daysUntilDeadline ?? null,
+    deadline_urgency: raw?.deadline_urgency ?? raw?.deadlineUrgency ?? null,
+    deadline_adjusted: Boolean(raw?.deadline_adjusted ?? raw?.deadlineAdjusted ?? false),
   };
 }
 
@@ -112,8 +116,11 @@ export function fetchRetailers(id: string): Promise<RetailersResponse> {
 
 export function fetchPrediction(
   id: string,
+  deadline?: string | null,
 ): Promise<PredictionResponse | null> {
-  return request<any>(`/api/products/${id}/prediction`).then((raw) => {
+  let url = `/api/products/${id}/prediction`;
+  if (deadline) url += `?deadline=${encodeURIComponent(deadline)}`;
+  return request<any>(url).then((raw) => {
     if (!raw) return null;
     return normalizePredictionResponse(raw);
   });

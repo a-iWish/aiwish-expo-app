@@ -19,6 +19,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { SkeletonEditorialRow } from '../components/SkeletonEditorialRow';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeColors, spacing } from '../styles/theme';
+import { formatDeadline } from '../utils/deadlineFormat';
 
 type Props = {
   navigation: CompositeNavigationProp<
@@ -69,11 +70,15 @@ export const WatchlistScreen: React.FC<Props> = ({ navigation }) => {
       const meta = getMeta(item.id);
       const current = item.trusted_price ?? item.current_price;
       const deltaLine = formatSavedDelta(meta?.savedPrice, current);
+      const deadlineLine = meta?.deadline
+        ? `Need by ${formatDeadline(meta.deadline)}`
+        : undefined;
+      const metaSuffix = [deltaLine, deadlineLine].filter(Boolean).join('  ·  ');
       return (
         <MemoRow
           product={item}
           onPress={handleProductPress}
-          metaSuffix={deltaLine}
+          metaSuffix={metaSuffix || undefined}
         />
       );
     },

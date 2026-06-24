@@ -79,7 +79,7 @@ async function fetchAmazonHistorySeriesLegacy(productId: string): Promise<Retail
   return null;
 }
 
-export function useProductDetail(productId: string) {
+export function useProductDetail(productId: string, deadline?: string | null) {
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [priceHistory, setPriceHistory] = useState<MonthlyPricePoint[]>([]);
   const [allRetailerSeries, setAllRetailerSeries] = useState<RetailerPriceSeries[]>([]);
@@ -99,7 +99,7 @@ export function useProductDetail(productId: string) {
       try {
         const [detail, pred, ret] = await Promise.all([
           fetchProduct(productId),
-          fetchPrediction(productId).catch(() => null),
+          fetchPrediction(productId, deadline).catch(() => null),
           fetchRetailers(productId).catch(() => ({ retailers: [] as string[] })),
         ]);
 
@@ -204,7 +204,7 @@ export function useProductDetail(productId: string) {
 
     load();
     return () => { cancelled = true; };
-  }, [productId]);
+  }, [productId, deadline]);
 
   const selectRetailer = useCallback(
     (retailer: string | null) => {
