@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { QueryClientProvider } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   useFonts,
   Outfit_400Regular,
@@ -11,6 +12,7 @@ import {
   Outfit_700Bold,
 } from '@expo-google-fonts/outfit';
 import { ProductDetailScreen } from './src/screens/ProductDetailScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { LoginScreen } from './src/screens/auth/LoginScreen';
 import { RegisterScreen } from './src/screens/auth/RegisterScreen';
 import { ForgotPasswordScreen } from './src/screens/auth/ForgotPasswordScreen';
@@ -23,10 +25,19 @@ import { AuthProvider } from './src/context/AuthContext';
 import { queryClient } from './src/lib/queryClient';
 import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 
+const ONBOARDING_KEY = 'AIWISH_ONBOARDING_DONE';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AppNavigator() {
   const { colors, isDark } = useTheme();
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_KEY).then((value) => {
+      setOnboardingDone(value === 'true');
+    });
+  }, []);
 
   // On web, browser autofill forces a light background on inputs. Re-skin it
   // to match the current theme so fields don't render white on a dark UI.
@@ -57,16 +68,31 @@ function AppNavigator() {
     `;
   }, [colors]);
 
+  // Wait for AsyncStorage check before rendering the navigator
+  if (onboardingDone === null) {
+    return (
+      <View style={styles.boot}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack.Navigator
+        initialRouteName={onboardingDone ? 'Main' : 'Onboarding'}
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colors.background },
           animation: 'slide_from_right',
         }}
       >
+        <Stack.Screen
+          name="Onboarding"
+          component={OnboardingScreen}
+          options={{ animation: 'fade' }}
+        />
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
         <Stack.Screen
