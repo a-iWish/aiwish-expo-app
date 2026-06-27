@@ -1,14 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { Product } from '../types/product';
-import { fetchProducts } from '../services/api';
+import { fetchProducts, ProductFilters } from '../services/api';
 
 export const PRODUCTS_QUERY_KEY = ['products'] as const;
 
-export function useProducts() {
+export function useProducts(filters?: ProductFilters) {
+  const queryKey = filters
+    ? ['products', filters] as const
+    : PRODUCTS_QUERY_KEY;
+
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: PRODUCTS_QUERY_KEY,
+    queryKey,
     queryFn: async () => {
-      const result = await fetchProducts();
+      const result = await fetchProducts(filters);
       return result.products as Product[];
     },
   });

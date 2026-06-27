@@ -18,6 +18,7 @@ import { RegisterScreen } from './src/screens/auth/RegisterScreen';
 import { ForgotPasswordScreen } from './src/screens/auth/ForgotPasswordScreen';
 import { EditProfileScreen } from './src/screens/EditProfileScreen';
 import { ChangePasswordScreen } from './src/screens/ChangePasswordScreen';
+import { SharedWishlistScreen } from './src/screens/SharedWishlistScreen';
 import { MainTabs } from './src/navigation/MainTabs';
 import { RootStackParamList } from './src/navigation/types';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -95,6 +96,7 @@ function AppNavigator() {
         />
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+        <Stack.Screen name="SharedWishlist" component={SharedWishlistScreen} />
         <Stack.Screen
           name="Login"
           component={LoginScreen}

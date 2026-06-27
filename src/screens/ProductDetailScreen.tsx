@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Image,
@@ -42,6 +42,7 @@ import {
 import { lowestCurrentOffer } from '../utils/lowestCurrentOffer';
 import { mergePredictionSummary } from '../utils/predictionMerge';
 import { useWatchlist } from '../hooks/useWatchlist';
+import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { useAuth } from '../context/AuthContext';
 import { buildRetailerPurchaseUrl } from '../utils/retailerPurchaseUrl';
 import { normalizeVerdict } from '../utils/verdictStyle';
@@ -76,8 +77,13 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   } = useProductDetail(productId);
 
   const { isWatched, toggle: toggleWatchlist } = useWatchlist();
+  const { addRecent } = useRecentlyViewed();
   const { isAuthenticated } = useAuth();
   const watched = isWatched(productId);
+
+  useEffect(() => {
+    addRecent(productId);
+  }, [productId, addRecent]);
 
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     setShowStickyBar(e.nativeEvent.contentOffset.y > 120);

@@ -144,12 +144,44 @@ export interface ForecastPoint {
 export interface WishlistItem {
   product_id: string;
   saved_price?: number | null;
+  is_public?: boolean;
+  occasion?: string | null;
+  marked_bought_by?: string | null;
   created_at: string;
 }
 
 export interface WishlistResponse {
   items: WishlistItem[];
   count: number;
+}
+
+export interface ShareWishlistResponse {
+  share_url: string;
+  token: string;
+}
+
+export interface SharedWishlistItem {
+  product_id: string;
+  name: string;
+  image_url?: string | null;
+  category?: string | null;
+  current_price?: number | null;
+  recommendation?: string | null;
+  confidence?: number | null;
+  is_public: boolean;
+  occasion?: string | null;
+  marked_bought_by?: string | null;
+}
+
+export interface SharedWishlistResponse {
+  owner_name: string;
+  items: SharedWishlistItem[];
+  count: number;
+}
+
+export interface MarkBoughtResponse {
+  product_id: string;
+  marked_bought_by: string;
 }
 
 export interface PredictionResponse {

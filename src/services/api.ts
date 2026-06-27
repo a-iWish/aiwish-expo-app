@@ -8,6 +8,9 @@ import {
   RetailersResponse,
   WishlistItem,
   WishlistResponse,
+  ShareWishlistResponse,
+  SharedWishlistResponse,
+  MarkBoughtResponse,
 } from '../types/product';
 import { apiFetch } from './httpClient';
 
@@ -58,8 +61,29 @@ function request<T>(path: string): Promise<T> {
   return apiFetch<T>(path, { method: 'GET', auth: false });
 }
 
-export function fetchProducts(): Promise<ProductListResponse> {
-  return request<ProductListResponse>('/api/products');
+export interface ProductFilters {
+  verdict?: string | null;
+  minConfidence?: number | null;
+  category?: string | null;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  sortBy?: string | null;
+}
+
+export function fetchProducts(filters?: ProductFilters): Promise<ProductListResponse> {
+  let url = '/api/products';
+  const params: string[] = [];
+
+  if (filters?.verdict) params.push(`verdict=${encodeURIComponent(filters.verdict)}`);
+  if (filters?.minConfidence != null) params.push(`min_confidence=${filters.minConfidence}`);
+  if (filters?.category) params.push(`category=${encodeURIComponent(filters.category)}`);
+  if (filters?.minPrice != null) params.push(`min_price=${filters.minPrice}`);
+  if (filters?.maxPrice != null) params.push(`max_price=${filters.maxPrice}`);
+  if (filters?.sortBy) params.push(`sort_by=${encodeURIComponent(filters.sortBy)}`);
+
+  if (params.length > 0) url += `?${params.join('&')}`;
+
+  return request<ProductListResponse>(url);
 }
 
 export function fetchProduct(id: string): Promise<ProductDetail> {
@@ -150,4 +174,41 @@ export function removeFromWishlist(productId: string): Promise<void> {
     method: 'DELETE',
     auth: true,
   });
+}
+
+export function shareWishlist(): Promise<ShareWishlistResponse> {
+  return apiFetch<ShareWishlistResponse>('/api/wishlist/share', {
+    method: 'POST',
+    auth: true,
+  });
+}
+
+export function getSharedWishlist(
+  token: string,
+  giftMode = false,
+): Promise<SharedWishlistResponse> {
+  let url = `/api/wishlist/shared/${encodeURIComponent(token)}`;
+  if (giftMode) url += '?gift_mode=true';
+  return apiFetch<SharedWishlistResponse>(url, { method: 'GET', auth: false });
+}
+
+export function updateWishlistItem(
+  productId: string,
+  updates: { is_public?: boolean; occasion?: string; target_date?: string },
+): Promise<WishlistItem> {
+  return apiFetch<WishlistItem>(`/api/wishlist/${productId}`, {
+    method: 'PATCH',
+    auth: true,
+    body: updates,
+  });
+}
+
+export function markBought(
+  token: string,
+  productId: string,
+): Promise<MarkBoughtResponse> {
+  return apiFetch<MarkBoughtResponse>(
+    `/api/wishlist/shared/${encodeURIComponent(token)}/mark-bought/${productId}`,
+    { method: 'POST', auth: true },
+  );
 }

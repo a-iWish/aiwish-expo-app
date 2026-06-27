@@ -4,6 +4,7 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   ProductDetail: { productId: string };
+  SharedWishlist: { token: string };
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;

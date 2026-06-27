@@ -6,14 +6,18 @@ import {
   StyleSheet,
   Pressable,
   RefreshControl,
+  TextInput,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { useProducts } from '../hooks/useProducts';
+import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
+import { ProductFilters } from '../services/api';
 import { Product } from '../types/product';
 import { EditorialProductRow, AppText, SearchBar } from '../components';
 import { DiscoverHeader } from '../components/DiscoverHeader';
@@ -51,6 +55,30 @@ type Props = {
     NativeStackNavigationProp<RootStackParamList>
   >;
 };
+
+/** Verdict filter options */
+const VERDICT_CHIPS = [
+  { key: 'all', label: 'All' },
+  { key: 'buy', label: 'BUY' },
+  { key: 'wait', label: 'WAIT' },
+  { key: 'hold', label: 'HOLD' },
+];
+
+/** Confidence filter options */
+const CONFIDENCE_CHIPS = [
+  { key: 'any', label: 'Any' },
+  { key: '70', label: '70+' },
+  { key: '80', label: '80+' },
+  { key: '90', label: '90+' },
+];
+
+/** Sort options that map to API sort_by values */
+const SORT_CHIPS = [
+  { key: 'confidence', label: 'Best picks' },
+  { key: 'price_asc', label: 'Price ↑' },
+  { key: 'price_desc', label: 'Price ↓' },
+  { key: 'discount', label: 'Biggest drop' },
+];
 
 /** A compact horizontal deal card for the "Best Deals" carousel. */
 const DealCard = React.memo(function DealCard({
@@ -153,6 +181,86 @@ const createDealCardStyles = (colors: ThemeColors) =>
     },
   });
 
+/** Recently viewed compact card (reuses DealCard visual style). */
+const RecentCard = React.memo(function RecentCard({
+  product,
+  onPress,
+  colors,
+}: {
+  product: Product;
+  onPress: (p: Product) => void;
+  colors: ThemeColors;
+}) {
+  const cardStyles = useMemo(() => createRecentCardStyles(colors), [colors]);
+  const price = product.trusted_price ?? product.current_price;
+
+  return (
+    <Pressable
+      onPress={() => onPress(product)}
+      style={({ pressed }) => [cardStyles.card, pressed && cardStyles.cardPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={`${product.name}`}
+    >
+      {product.image_url ? (
+        <Image
+          source={{ uri: product.image_url }}
+          style={cardStyles.image}
+          resizeMode="cover"
+          accessibilityIgnoresInvertColors
+        />
+      ) : (
+        <View style={cardStyles.imagePlaceholder} />
+      )}
+      <AppText variant="bodySemibold" numberOfLines={2} style={cardStyles.name}>
+        {product.name}
+      </AppText>
+      {price != null && (
+        <AppText variant="caption" style={cardStyles.price}>
+          ${price.toFixed(2)}
+        </AppText>
+      )}
+    </Pressable>
+  );
+});
+
+const createRecentCardStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    card: {
+      width: 132,
+      backgroundColor: colors.cardBg,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.sm,
+      gap: spacing.xs,
+    },
+    cardPressed: {
+      backgroundColor: colors.surfaceLight,
+    },
+    image: {
+      width: '100%',
+      height: 68,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.surfaceLight,
+    },
+    imagePlaceholder: {
+      width: '100%',
+      height: 68,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.surfaceLight,
+    },
+    name: {
+      fontSize: 12,
+      lineHeight: 16,
+      letterSpacing: -0.1,
+    },
+    price: {
+      fontFamily: SEMIBOLD_FONT,
+      color: colors.text,
+      fontSize: 13,
+    },
+  });
+
 const MemoRow = React.memo(EditorialProductRow);
 
 export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
@@ -162,7 +270,67 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
   const [sortMode, setSortMode] = useState<SortMode>('verdict');
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const { products, loading, error, refetch } = useProducts();
+
+  // Advanced filter state
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [verdictFilter, setVerdictFilter] = useState<string | null>(null);
+  const [confidenceFilter, setConfidenceFilter] = useState<string | null>(null);
+  const [minPriceText, setMinPriceText] = useState('');
+  const [maxPriceText, setMaxPriceText] = useState('');
+  const [apiSortBy, setApiSortBy] = useState<string | null>(null);
+
+  // Build API filters object
+  const apiFilters = useMemo<ProductFilters | undefined>(() => {
+    const f: ProductFilters = {};
+    let hasFilter = false;
+
+    if (verdictFilter && verdictFilter !== 'all') {
+      f.verdict = verdictFilter;
+      hasFilter = true;
+    }
+    if (confidenceFilter && confidenceFilter !== 'any') {
+      f.minConfidence = parseInt(confidenceFilter, 10);
+      hasFilter = true;
+    }
+    const minP = minPriceText ? parseFloat(minPriceText) : null;
+    if (minP != null && !isNaN(minP) && minP > 0) {
+      f.minPrice = minP;
+      hasFilter = true;
+    }
+    const maxP = maxPriceText ? parseFloat(maxPriceText) : null;
+    if (maxP != null && !isNaN(maxP) && maxP > 0) {
+      f.maxPrice = maxP;
+      hasFilter = true;
+    }
+    if (apiSortBy) {
+      f.sortBy = apiSortBy;
+      hasFilter = true;
+    }
+
+    return hasFilter ? f : undefined;
+  }, [verdictFilter, confidenceFilter, minPriceText, maxPriceText, apiSortBy]);
+
+  // Count active filters for badge
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (verdictFilter && verdictFilter !== 'all') count++;
+    if (confidenceFilter && confidenceFilter !== 'any') count++;
+    if (minPriceText) count++;
+    if (maxPriceText) count++;
+    if (apiSortBy) count++;
+    return count;
+  }, [verdictFilter, confidenceFilter, minPriceText, maxPriceText, apiSortBy]);
+
+  const clearAllFilters = useCallback(() => {
+    setVerdictFilter(null);
+    setConfidenceFilter(null);
+    setMinPriceText('');
+    setMaxPriceText('');
+    setApiSortBy(null);
+  }, []);
+
+  const { products, loading, error, refetch } = useProducts(apiFilters);
+  const { recentIds } = useRecentlyViewed();
 
   /** Products with high-confidence BUY recommendation for the deals carousel. */
   const deals = useMemo(
@@ -173,6 +341,15 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
       }),
     [products],
   );
+
+  /** Recently viewed products matched from the loaded product list. */
+  const recentlyViewedProducts = useMemo(() => {
+    if (recentIds.length === 0) return [];
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    return recentIds
+      .map((id) => productMap.get(id))
+      .filter((p): p is Product => p != null);
+  }, [recentIds, products]);
 
   const categoryCounts = useMemo(
     () =>
@@ -254,7 +431,15 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
     [handleProductPress, colors],
   );
 
+  const renderRecentCard = useCallback(
+    ({ item }: { item: Product }) => (
+      <RecentCard product={item} onPress={handleProductPress} colors={colors} />
+    ),
+    [handleProductPress, colors],
+  );
+
   const dealKeyExtractor = useCallback((item: Product) => `deal-${item.id}`, []);
+  const recentKeyExtractor = useCallback((item: Product) => `recent-${item.id}`, []);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -268,6 +453,10 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
     ),
     [handleProductPress],
   );
+
+  const toggleFilters = useCallback(() => {
+    setFiltersExpanded((prev) => !prev);
+  }, []);
 
   const listHeader = useMemo(
     () => (
@@ -297,6 +486,24 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
             />
           </View>
         )}
+        {!loading && !error && recentlyViewedProducts.length > 0 && (
+          <View style={styles.recentSection}>
+            <View style={styles.dealsSectionHeader}>
+              <AppText variant="bodySemibold" style={styles.dealsSectionTitle}>
+                Recently Viewed
+              </AppText>
+            </View>
+            <FlatList
+              horizontal
+              data={recentlyViewedProducts}
+              keyExtractor={recentKeyExtractor}
+              renderItem={renderRecentCard}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.dealsListContent}
+              ItemSeparatorComponent={() => <View style={{ width: spacing.sm }} />}
+            />
+          </View>
+        )}
         {!loading && !error && (
           <View style={styles.filters}>
             <SearchBar value={query} onChange={setQuery} />
@@ -316,6 +523,122 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
               onSelect={(key) => key && setSortMode(key as SortMode)}
               allowDeselect={false}
             />
+
+            {/* Advanced Filters Toggle */}
+            <View style={styles.filterToggleRow}>
+              <Pressable
+                onPress={toggleFilters}
+                style={styles.filterToggleBtn}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  filtersExpanded ? 'Collapse filters' : 'Expand filters'
+                }
+              >
+                <Ionicons
+                  name={filtersExpanded ? 'options' : 'options-outline'}
+                  size={18}
+                  color={activeFilterCount > 0 ? colors.brandEnd : colors.textSecondary}
+                />
+                <AppText
+                  variant="bodySemibold"
+                  style={[
+                    styles.filterToggleText,
+                    activeFilterCount > 0 && { color: colors.brandEnd },
+                  ]}
+                >
+                  Filters
+                </AppText>
+                {activeFilterCount > 0 && (
+                  <View style={styles.filterBadge}>
+                    <AppText variant="caption" style={styles.filterBadgeText}>
+                      {activeFilterCount}
+                    </AppText>
+                  </View>
+                )}
+                <Ionicons
+                  name={filtersExpanded ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={colors.textSoft}
+                />
+              </Pressable>
+              {activeFilterCount > 0 && (
+                <Pressable
+                  onPress={clearAllFilters}
+                  style={styles.clearAllBtn}
+                  accessibilityLabel="Clear all filters"
+                >
+                  <AppText variant="caption" style={styles.clearAllText}>
+                    Clear all
+                  </AppText>
+                </Pressable>
+              )}
+            </View>
+
+            {/* Collapsible Advanced Filters Panel */}
+            {filtersExpanded && (
+              <View style={styles.advancedFilters}>
+                <FilterChipRow
+                  label="Verdict"
+                  chips={VERDICT_CHIPS}
+                  selectedKey={verdictFilter ?? 'all'}
+                  onSelect={(key) =>
+                    setVerdictFilter(key === 'all' ? null : key)
+                  }
+                  allowDeselect={false}
+                />
+
+                <FilterChipRow
+                  label="Confidence"
+                  chips={CONFIDENCE_CHIPS}
+                  selectedKey={confidenceFilter ?? 'any'}
+                  onSelect={(key) =>
+                    setConfidenceFilter(key === 'any' ? null : key)
+                  }
+                  allowDeselect={false}
+                />
+
+                <View style={styles.priceRangeWrap}>
+                  <AppText variant="meta" style={styles.priceRangeLabel}>
+                    Price range
+                  </AppText>
+                  <View style={styles.priceInputRow}>
+                    <TextInput
+                      value={minPriceText}
+                      onChangeText={setMinPriceText}
+                      placeholder="Min"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="numeric"
+                      style={styles.priceInput}
+                      returnKeyType="done"
+                      accessibilityLabel="Minimum price"
+                    />
+                    <AppText variant="caption" style={styles.priceDash}>
+                      to
+                    </AppText>
+                    <TextInput
+                      value={maxPriceText}
+                      onChangeText={setMaxPriceText}
+                      placeholder="Max"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="numeric"
+                      style={styles.priceInput}
+                      returnKeyType="done"
+                      accessibilityLabel="Maximum price"
+                    />
+                  </View>
+                </View>
+
+                <FilterChipRow
+                  label="API Sort"
+                  chips={SORT_CHIPS}
+                  selectedKey={apiSortBy ?? 'confidence'}
+                  onSelect={(key) =>
+                    setApiSortBy(key === 'confidence' ? null : key)
+                  }
+                  allowDeselect={false}
+                />
+              </View>
+            )}
           </View>
         )}
       </>
@@ -328,17 +651,25 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
       deals,
       dealKeyExtractor,
       renderDealCard,
+      recentlyViewedProducts,
+      recentKeyExtractor,
+      renderRecentCard,
       categoryChips,
       sortChips,
       selectedCategory,
       sortMode,
       query,
-      styles.filters,
-      styles.dealsSection,
-      styles.dealsSectionHeader,
-      styles.dealsSectionTitle,
-      styles.dealsSectionCount,
-      styles.dealsListContent,
+      filtersExpanded,
+      toggleFilters,
+      activeFilterCount,
+      verdictFilter,
+      confidenceFilter,
+      minPriceText,
+      maxPriceText,
+      apiSortBy,
+      clearAllFilters,
+      colors,
+      styles,
     ],
   );
 
@@ -408,6 +739,12 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.hairline,
     },
+    recentSection: {
+      paddingTop: spacing.md,
+      paddingBottom: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.hairline,
+    },
     dealsSectionHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -437,6 +774,79 @@ const createStyles = (colors: ThemeColors) =>
       paddingBottom: spacing.md,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.hairline,
+    },
+    filterToggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+    },
+    filterToggleBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      minHeight: MIN_TOUCH,
+      paddingVertical: spacing.sm,
+    },
+    filterToggleText: {
+      fontSize: fontSize.sm,
+      color: colors.textSecondary,
+    },
+    filterBadge: {
+      backgroundColor: colors.brandEnd,
+      borderRadius: 10,
+      minWidth: 20,
+      height: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+    },
+    filterBadgeText: {
+      color: '#FFFFFF',
+      fontFamily: SEMIBOLD_FONT,
+      fontSize: 11,
+      lineHeight: 14,
+    },
+    clearAllBtn: {
+      minHeight: MIN_TOUCH,
+      justifyContent: 'center',
+      paddingHorizontal: spacing.sm,
+    },
+    clearAllText: {
+      color: colors.brandEnd,
+      fontFamily: SEMIBOLD_FONT,
+    },
+    advancedFilters: {
+      gap: spacing.md,
+      paddingTop: spacing.xs,
+    },
+    priceRangeWrap: {
+      gap: spacing.sm,
+    },
+    priceRangeLabel: {
+      paddingHorizontal: spacing.md,
+    },
+    priceInputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    priceInput: {
+      flex: 1,
+      fontFamily: BODY_FONT,
+      fontSize: fontSize.sm,
+      color: colors.text,
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.sm,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 10,
+      minHeight: MIN_TOUCH,
+    },
+    priceDash: {
+      color: colors.textMuted,
     },
     listContent: {
       paddingBottom: spacing.xl,
