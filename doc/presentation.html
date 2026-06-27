@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>a.iwish — Project Update</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #09090B;
+    --surface: #141416;
+    --surface2: #1E1E22;
+    --text: #F4F4F5;
+    --text-secondary: #A1A1AA;
+    --text-muted: #71717A;
+    --brand-start: #F0048C;
+    --brand-end: #9D4EDD;
+    --success: #22C55E;
+    --warning: #F59E0B;
+    --error: #EF4444;
+    --blue: #3B82F6;
+    --border: #27272A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Outfit', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  .slide {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    padding: 60px 80px;
+    position: relative;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .slide.active { display: flex; }
+
+  .slide-number {
+    position: absolute;
+    bottom: 30px;
+    right: 40px;
+    font-size: 14px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .brand-line {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--brand-start), var(--brand-end));
+  }
+
+  h1 {
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 16px;
+    letter-spacing: -1px;
+  }
+
+  h2 {
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 24px;
+    letter-spacing: -0.5px;
+  }
+
+  h3 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, var(--brand-start), var(--brand-end));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-size: 22px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    line-height: 1.5;
+    max-width: 700px;
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 20px;
+  }
+
+  .tag-brand {
+    background: linear-gradient(135deg, rgba(240,4,140,0.15), rgba(157,78,221,0.15));
+    color: var(--brand-end);
+    border: 1px solid rgba(157,78,221,0.3);
+  }
+
+  .tag-success {
+    background: rgba(34,197,94,0.1);
+    color: var(--success);
+    border: 1px solid rgba(34,197,94,0.2);
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 20px;
+  }
+
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+    margin-top: 20px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+
+  .card-accent {
+    border-color: rgba(157,78,221,0.3);
+    background: linear-gradient(135deg, rgba(240,4,140,0.03), rgba(157,78,221,0.05));
+  }
+
+  .card h3 { margin-bottom: 12px; }
+
+  .card p, .card li {
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  ul { list-style: none; padding: 0; }
+
+  ul li {
+    padding: 6px 0;
+    font-size: 17px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  ul li::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--brand-end);
+    margin-right: 12px;
+    vertical-align: middle;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 16px;
+    font-size: 15px;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(39,39,42,0.5);
+    color: var(--text-secondary);
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  .highlight { color: var(--success); font-weight: 600; }
+  .highlight-warn { color: var(--warning); font-weight: 600; }
+  .highlight-brand { color: var(--brand-end); font-weight: 600; }
+  .highlight-blue { color: var(--blue); font-weight: 600; }
+  .highlight-text { color: var(--text); font-weight: 500; }
+
+  .metric-row {
+    display: flex;
+    gap: 24px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+
+  .metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 28px;
+    min-width: 180px;
+    flex: 1;
+  }
+
+  .metric-value {
+    font-size: 36px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 6px;
+  }
+
+  .metric-label {
+    font-size: 14px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  .flow-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 30px 0;
+    flex-wrap: wrap;
+  }
+
+  .flow-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 24px;
+    text-align: center;
+    min-width: 140px;
+  }
+
+  .flow-box-brand {
+    border-color: rgba(157,78,221,0.4);
+    background: linear-gradient(135deg, rgba(240,4,140,0.08), rgba(157,78,221,0.08));
+  }
+
+  .flow-arrow {
+    font-size: 24px;
+    color: var(--text-muted);
+  }
+
+  .flow-box .flow-title {
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+
+  .flow-box .flow-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .verdict-buy { color: var(--success); font-weight: 700; font-size: 20px; }
+  .verdict-wait { color: var(--warning); font-weight: 700; font-size: 20px; }
+  .verdict-hold { color: var(--text-muted); font-weight: 700; font-size: 20px; }
+
+  .progress-bar {
+    height: 3px;
+    background: var(--surface2);
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--brand-start), var(--brand-end));
+    transition: width 0.3s ease;
+  }
+
+  .nav-hint {
+    position: absolute;
+    bottom: 30px;
+    left: 40px;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .checklist li::before {
+    content: none;
+  }
+
+  .checklist li {
+    padding: 5px 0;
+    font-size: 16px;
+  }
+
+  .check { color: var(--success); margin-right: 8px; font-weight: 600; }
+  .uncheck { color: var(--text-muted); margin-right: 8px; }
+
+  .section-label {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  .compact-table { font-size: 14px; }
+  .compact-table td, .compact-table th { padding: 8px 12px; }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .feature-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .feature-item h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .feature-item p {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .small-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-top: 8px;
+  }
+
+  @media (max-width: 900px) {
+    .slide { padding: 30px 40px; }
+    h1 { font-size: 36px; }
+    h2 { font-size: 28px; }
+    .two-col, .three-col { grid-template-columns: 1fr; }
+    .metric-row { gap: 12px; }
+    .feature-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Title -->
+<div class="slide active" id="s1">
+  <div class="brand-line"></div>
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+    <p class="section-label" style="margin-bottom:20px;">Project Update &mdash; June 2026</p>
+    <h1>a<span style="color:var(--brand-start);">.</span>iwish</h1>
+    <h1 style="margin-top:-8px;"><span class="gradient-text">Sprint Review</span></h1>
+    <p class="subtitle" style="margin-top:20px;">
+      Model v3, deadline-aware predictions, new app features,<br>
+      and the road ahead.
+    </p>
+    <div style="margin-top:40px; display:flex; gap:12px;">
+      <span class="tag tag-brand">ML Pipeline</span>
+      <span class="tag tag-brand">API</span>
+      <span class="tag tag-brand">Mobile App</span>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:0%"></div></div>
+</div>
+
+<!-- SLIDE 2: Agenda -->
+<div class="slide" id="s2">
+  <div class="brand-line"></div>
+  <h2>Agenda</h2>
+  <div class="two-col" style="margin-top:20px;">
+    <div>
+      <div class="card" style="margin-bottom:20px;">
+        <h3>1. Model Evolution</h3>
+        <p>v1 &rarr; v2 &rarr; v3 comparison, the deadline-aware window model, and new features added to the pipeline</p>
+      </div>
+      <div class="card" style="margin-bottom:20px;">
+        <h3>2. API Enhancements</h3>
+        <p>Deadline-aware predictions, deals endpoint, product filtering, shared wishlists</p>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:20px;">
+        <h3>3. App UX/UI</h3>
+        <p>8 new features: deadline picker, forecast chart, deals feed, onboarding, filters, recently viewed, gift mode</p>
+      </div>
+      <div class="card">
+        <h3>4. Roadmap</h3>
+        <p>What we shipped, what's next, and key metrics to track</p>
+      </div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:6%"></div></div>
+</div>
+
+<!-- SLIDE 3: System Architecture -->
+<div class="slide" id="s3">
+  <div class="brand-line"></div>
+  <span class="tag tag-brand">Architecture</span>
+  <h2>System Overview</h2>
+  <div class="flow-diagram" style="margin-top:40px;">
+    <div class="flow-box">
+      <div class="flow-title">Keepa API</div>
+      <div class="flow-sub">Amazon prices<br>12 series, 18+ months</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box">
+      <div class="flow-title">SerpAPI</div>
+      <div class="flow-sub">Google Shopping<br>Walmart, Target, Best Buy</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box flow-box-brand">
+      <div class="flow-title">aiwish-ml</div>
+      <div class="flow-sub">XGBoost v3<br>61 features</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box">
+      <div class="flow-title">PostgreSQL</div>
+      <div class="flow-sub">80 products<br>predictions table</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box flow-box-brand">
+      <div class="flow-title">aiwish-api</div>
+      <div class="flow-sub">FastAPI<br>deadline policy</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box">
+      <div class="flow-title">Expo App</div>
+      <div class="flow-sub">React Native<br>iOS + Android</div>
+    </div>
+  </div>
+  <div class="metric-row" style="margin-top:40px;">
+    <div class="metric">
+      <div class="metric-value" style="color:var(--brand-end);">80</div>
+      <div class="metric-label">Products tracked</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value" style="color:var(--brand-end);">4</div>
+      <div class="metric-label">Categories</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value" style="color:var(--brand-end);">5</div>
+      <div class="metric-label">Retailers</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value" style="color:var(--brand-end);">18+</div>
+      <div class="metric-label">Months of history</div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:12%"></div></div>
+</div>
+
+<!-- SLIDE 4: Model Evolution -->
+<div class="slide" id="s4">
+  <div class="brand-line"></div>
+  <span class="tag tag-brand">ML Pipeline</span>
+  <h2>Model Evolution: v1 &rarr; v2 &rarr; v3</h2>
+  <table style="margin-top:24px;">
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>v1</th>
+        <th>v2 <span style="color:var(--text-muted);">(production)</span></th>
+        <th>v3 <span class="highlight-brand">(new)</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="highlight-text">Algorithm</td>
+        <td>XGBoost / GBR</td>
+        <td>XGBoost (2 heads)</td>
+        <td>XGBoost (single window model)</td>
+      </tr>
+      <tr>
+        <td class="highlight-text">Features</td>
+        <td>22 (price-only)</td>
+        <td>45 (+ demand, reviews, events)</td>
+        <td class="highlight">61 (+ Buy Box, OOS, FBA, offers)</td>
+      </tr>
+      <tr>
+        <td class="highlight-text">Horizon</td>
+        <td>Fixed 30d</td>
+        <td>Fixed 30d + days-to-min</td>
+        <td class="highlight">Flexible: k = 3, 7, 14, 30 days</td>
+      </tr>
+      <tr>
+        <td class="highlight-text">Key Innovation</td>
+        <td>Mean reversion</td>
+        <td>5-tier cascade, confidence gating</td>
+        <td class="highlight">Deadline as model input</td>
+      </tr>
+      <tr>
+        <td class="highlight-text">Direction Accuracy</td>
+        <td>53.3%</td>
+        <td>54.6%</td>
+        <td>N/A (precision-first design)</td>
+      </tr>
+      <tr>
+        <td class="highlight-text">BUY Precision</td>
+        <td>~70%</td>
+        <td>86.7%</td>
+        <td class="highlight">87.5% &ndash; 95.6%</td>
+      </tr>
+      <tr>
+        <td class="highlight-text">Abstain Rate</td>
+        <td>0% (always fires)</td>
+        <td>56%</td>
+        <td>22% &ndash; 50% (varies by k)</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="progress-bar"><div class="progress-fill" style="width:18%"></div></div>
+</div>
+
+<!-- SLIDE 5: v3 Deep Dive -->
+<div class="slide" id="s5">
+  <div class="brand-line"></div>
+  <span class="tag tag-brand">ML Pipeline</span>
+  <h2>v3: Deadline-Aware Window Model</h2>
+  <div class="two-col" style="margin-top:16px;">
+    <div>
+      <h3>The Problem with v2</h3>
+      <ul>
+        <li><code>days_to_min</code> target is <span class="highlight-warn">bimodal</span>: either "now" or ~15 days out</li>
+        <li>Point regression lands in the empty middle &rarr; 7.77-day MAE</li>
+        <li>Fixed 30-day horizon &mdash; same answer regardless of when you need it</li>
+      </ul>
+      <h3 style="margin-top:24px;">The v3 Solution</h3>
+      <ul>
+        <li>One model predicts <span class="highlight">"best achievable drop within k days"</span></li>
+        <li>User's deadline <code>k</code> becomes a <span class="highlight">model feature</span></li>
+        <li>Monotonic constraint: longer window &ge; equal drop</li>
+        <li>Querying at <code>k = days_until_deadline</code> gives personalized answer</li>
+      </ul>
+    </div>
+    <div>
+      <div class="card card-accent">
+        <h3>How It Works</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:14px; line-height:2; color:var(--text-secondary); margin-top:8px;">
+          <div><span style="color:var(--text-muted);">User:</span> "I need AirPods by July 10"</div>
+          <div><span style="color:var(--text-muted);">Days until:</span> k = 13</div>
+          <div><span style="color:var(--text-muted);">Model input:</span> features + horizon_days=13</div>
+          <div><span style="color:var(--text-muted);">Prediction:</span> best drop within 13d = -2.1%</div>
+          <div><span style="color:var(--text-muted);">Threshold:</span> -2.1% &gt; buy_cut (-3%)</div>
+          <div style="margin-top:8px;"><span class="verdict-buy">BUY</span> <span style="color:var(--text-muted);">"No meaningful drop within 13 days"</span></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <h3>Same product, different deadline</h3>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:14px; line-height:2; color:var(--text-secondary); margin-top:8px;">
+          <div><span style="color:var(--text-muted);">User B:</span> k = 30 days</div>
+          <div><span style="color:var(--text-muted);">Prediction:</span> best drop = -8.9%</div>
+          <div><span style="color:var(--text-muted);">Threshold:</span> -8.9% &lt; wait_cut (-11%)</div>
+          <div style="margin-top:8px;"><span class="verdict-wait">WAIT</span> <span style="color:var(--text-muted);">"~9% drop likely within 30 days"</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:24%"></div></div>
+</div>
+
+<!-- SLIDE 6: v3 Results -->
+<div class="slide" id="s6">
+  <div class="brand-line"></div>
+  <span class="tag tag-success">Results</span>
+  <h2>v3 Test Set Performance</h2>
+  <p class="subtitle" style="margin-bottom:24px;">Window model vs fixed-30d baseline, per deadline horizon</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Deadline</th>
+        <th>v3 MAE</th>
+        <th>v2 Baseline MAE</th>
+        <th>Improvement</th>
+        <th>BUY Precision</th>
+        <th>BUY Coverage</th>
+        <th>WAIT Precision</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="highlight-text">3 days</td>
+        <td class="highlight">0.032</td>
+        <td>0.074</td>
+        <td class="highlight">&minus;58%</td>
+        <td class="highlight">95.6%</td>
+        <td>78.9%</td>
+        <td style="color:var(--text-muted);">&mdash;</td>
+      </tr>
+      <tr>
+        <td class="highlight-text">7 days</td>
+        <td class="highlight">0.042</td>
+        <td>0.068</td>
+        <td class="highlight">&minus;38%</td>
+        <td class="highlight">93.5%</td>
+        <td>63.5%</td>
+        <td style="color:var(--text-muted);">&mdash;</td>
+      </tr>
+      <tr>
+        <td class="highlight-text">14 days</td>
+        <td>0.051</td>
+        <td>0.063</td>
+        <td class="highlight-brand">&minus;20%</td>
+        <td>91.6%</td>
+        <td>49.5%</td>
+        <td style="color:var(--text-muted);">&mdash;</td>
+      </tr>
+      <tr>
+        <td class="highlight-text">30 days</td>
+        <td>0.061</td>
+        <td>0.061</td>
+        <td style="color:var(--text-muted);">&minus;2%</td>
+        <td>87.5%</td>
+        <td>30.6%</td>
+        <td>66.4%</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="card card-accent" style="margin-top:24px; max-width:700px;">
+    <p style="font-size:17px; color:var(--text-secondary); line-height:1.6;">
+      <span class="highlight">Key insight:</span> At short deadlines, the model correctly <strong style="color:var(--text);">never says WAIT</strong>
+      (you can't reliably catch a drop in 3 days) and issues very high-precision BUYs. WAIT only becomes viable at k=30.
+    </p>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:30%"></div></div>
+</div>
+
+<!-- SLIDE 7: v2 Backtest -->
+<div class="slide" id="s7">
+  <div class="brand-line"></div>
+  <span class="tag tag-success">Validation</span>
+  <h2>v2 Backtest: Real Savings</h2>
+  <p class="subtitle">6-month historical simulation: "if you'd followed our calls..."</p>
+  <div class="metric-row" style="margin-top:32px;">
+    <div class="metric">
+      <div class="metric-value highlight">$1,848</div>
+      <div class="metric-label">Total savings across basket</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value highlight">6.3%</div>
+      <div class="metric-label">Average saving per product</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value highlight">22.8%</div>
+      <div class="metric-label">Average saving per WAIT call</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value highlight">88%</div>
+      <div class="metric-label">WAIT calls correct</div>
+    </div>
+  </div>
+  <div class="two-col" style="margin-top:32px;">
+    <div class="card">
+      <h3>What this means</h3>
+      <ul>
+        <li>69 products in the backtest basket</li>
+        <li>When we said WAIT, users saved an average of 22.8%</li>
+        <li>88% of WAIT recommendations were correct</li>
+        <li>v3 is expected to improve short-horizon accuracy further</li>
+      </ul>
+    </div>
+    <div class="card card-accent">
+      <h3>Precision-First Philosophy</h3>
+      <ul>
+        <li>We only fire when highly confident (~85% precision)</li>
+        <li>When uncertain, we abstain and fall back to heuristics</li>
+        <li>Users always get an answer &mdash; but confident calls are ML-backed</li>
+        <li>Better to say "we're not sure" than be wrong</li>
+      </ul>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:36%"></div></div>
+</div>
+
+<!-- SLIDE 8: New ML Features -->
+<div class="slide" id="s8">
+  <div class="brand-line"></div>
+  <span class="tag tag-brand">ML Pipeline</span>
+  <h2>16 New Features Added to v3</h2>
+  <p class="subtitle">Extracting high-value signals from Keepa data we already collect</p>
+  <div class="three-col" style="margin-top:24px;">
+    <div class="card">
+      <h3 style="font-size:18px;">Buy Box Signals</h3>
+      <ul style="font-size:14px;">
+        <li><code>buybox_price</code></li>
+        <li><code>buybox_vs_new</code> ratio</li>
+        <li><code>buybox_volatility_30</code></li>
+      </ul>
+      <p class="small-text">Seller rotation predicts price instability</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:18px;">Out-of-Stock</h3>
+      <ul style="font-size:14px;">
+        <li><code>oos_days_30</code> / <code>oos_days_90</code></li>
+        <li><code>oos_pct_30</code></li>
+      </ul>
+      <p class="small-text">Stock-outs precede price spikes</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:18px;">Offer Count Dynamics</h3>
+      <ul style="font-size:14px;">
+        <li><code>offer_count_trend_30</code></li>
+        <li><code>offer_count_min/max_30</code></li>
+      </ul>
+      <p class="small-text">More sellers entering = prices fall</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:18px;">Used Market</h3>
+      <ul style="font-size:14px;">
+        <li><code>used_price</code></li>
+        <li><code>used_vs_new</code> ratio</li>
+      </ul>
+      <p class="small-text">Low used/new ratio = downward pressure</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:18px;">FBA Pricing</h3>
+      <ul style="font-size:14px;">
+        <li><code>fba_price</code></li>
+        <li><code>fba_vs_new</code> ratio</li>
+      </ul>
+      <p class="small-text">FBA vs marketplace divergence signal</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:18px;">Longer Averages</h3>
+      <ul style="font-size:14px;">
+        <li><code>rmean_180</code></li>
+        <li><code>vs_rmean_180</code> / <code>vs_rmin_90</code></li>
+      </ul>
+      <p class="small-text">Better mean-reversion calibration</p>
+    </div>
+  </div>
+  <p style="margin-top:20px; color:var(--text-muted); font-size:15px;">
+    Feature count: 22 (v1) &rarr; 45 (v2) &rarr; <span class="highlight">61 (v3)</span> &mdash; all backward-looking, no data leakage, with monotonic constraints
+  </p>
+  <div class="progress-bar"><div class="progress-fill" style="width:42%"></div></div>
+</div>
+
+<!-- SLIDE 9: API Enhancements -->
+<div class="slide" id="s9">
+  <div class="brand-line"></div>
+  <span class="tag tag-brand">API</span>
+  <h2>Backend Enhancements</h2>
+  <div class="feature-grid">
+    <div class="feature-item">
+      <h4>Deadline-Aware Predictions</h4>
+      <p><code>GET /products/{id}/prediction?deadline=2026-07-15</code><br><br>
+      API picks the v3 row nearest the user's deadline. Falls back to v2 heuristic when v3 rows don't exist. Returns urgency, adjusted verdict, and confidence.</p>
+    </div>
+    <div class="feature-item">
+      <h4>Deals Feed</h4>
+      <p><code>GET /products/deals</code><br><br>
+      Top 20 high-confidence BUY products near 90-day lows. Powers the "Best Deals Right Now" carousel in the app.</p>
+    </div>
+    <div class="feature-item">
+      <h4>Product Filtering</h4>
+      <p><code>GET /products?verdict=buy&min_confidence=80&sort_by=confidence</code><br><br>
+      6 new query params: verdict, min_confidence, category, min_price, max_price, sort_by. All additive, non-breaking.</p>
+    </div>
+    <div class="feature-item">
+      <h4>Shared Wishlists</h4>
+      <p><code>POST /wishlist/share</code> &rarr; shareable token<br>
+      <code>GET /wishlist/shared/{token}</code> &rarr; public view<br>
+      <code>POST /shared/{token}/mark-bought/{id}</code><br><br>
+      Gift mode hides prices. Mark-as-bought prevents duplicates.</p>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
+</div>
+
+<!-- SLIDE 10: App Features Overview -->
+<div class="slide" id="s10">
+  <div class="brand-line"></div>
+  <span class="tag tag-brand">Mobile App</span>
+  <h2>8 New App Features</h2>
+  <div class="feature-grid">
+    <div class="feature-item" style="border-color:rgba(34,197,94,0.3);">
+      <h4><span class="highlight">1.</span> Deadline Picker</h4>
+      <p>"I need this by [date]" &rarr; personalized BUY/WAIT verdict with urgency badges (green/orange/red)</p>
+    </div>
+    <div class="feature-item" style="border-color:rgba(34,197,94,0.3);">
+      <h4><span class="highlight">2.</span> Forecast Overlay</h4>
+      <p>Dashed line + confidence band on the price chart showing the model's predicted price trajectory</p>
+    </div>
+    <div class="feature-item" style="border-color:rgba(34,197,94,0.3);">
+      <h4><span class="highlight">3.</span> Deals Carousel</h4>
+      <p>"Best Deals Right Now" horizontal scroll on Discover &mdash; BUY products with 80%+ confidence</p>
+    </div>
+    <div class="feature-item" style="border-color:rgba(34,197,94,0.3);">
+      <h4><span class="highlight">4.</span> Advanced Filters</h4>
+      <p>Verdict, confidence threshold, price range, and sort options in a collapsible panel</p>
+    </div>
+    <div class="feature-item" style="border-color:rgba(34,197,94,0.3);">
+      <h4><span class="highlight">5.</span> Onboarding</h4>
+      <p>3-page swipeable walkthrough on first launch: retailers, AI model, save &amp; notify</p>
+    </div>
+    <div class="feature-item" style="border-color:rgba(34,197,94,0.3);">
+      <h4><span class="highlight">6.</span> Recently Viewed</h4>
+      <p>Last 20 viewed products persisted locally, shown as a horizontal section on Discover</p>
+    </div>
+    <div class="feature-item" style="border-color:rgba(34,197,94,0.3);">
+      <h4><span class="highlight">7.</span> Shared Wishlists</h4>
+      <p>Share button generates a link. Recipients see items with verdicts. Public/private toggle per item.</p>
+    </div>
+    <div class="feature-item" style="border-color:rgba(34,197,94,0.3);">
+      <h4><span class="highlight">8.</span> Gift Mode</h4>
+      <p>Shared wishlist hides prices. "Mark as Bought" button prevents duplicate gifts.</p>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:58%"></div></div>
+</div>
+
+<!-- SLIDE 11: Deadline Picker Detail -->
+<div class="slide" id="s11">
+  <div class="brand-line"></div>
+  <span class="tag tag-brand">Feature Deep Dive</span>
+  <h2>Deadline Picker &mdash; The v3 UX</h2>
+  <div class="two-col">
+    <div>
+      <h3>How It Works</h3>
+      <ul>
+        <li>User taps "Set deadline" on the product detail screen</li>
+        <li>Native date picker appears</li>
+        <li>Selected date is sent as <code>?deadline=</code> to the API</li>
+        <li>API picks the v3 row with the nearest horizon</li>
+        <li>Verdict adjusts: same product, different answer per user</li>
+      </ul>
+      <h3 style="margin-top:24px;">Urgency Badges</h3>
+      <div style="display:flex; gap:12px; margin-top:12px;">
+        <span style="background:rgba(34,197,94,0.15); color:var(--success); padding:6px 16px; border-radius:8px; font-size:14px; font-weight:500;">On track</span>
+        <span style="background:rgba(245,158,11,0.15); color:var(--warning); padding:6px 16px; border-radius:8px; font-size:14px; font-weight:500;">Deadline approaching</span>
+        <span style="background:rgba(239,68,68,0.15); color:var(--error); padding:6px 16px; border-radius:8px; font-size:14px; font-weight:500;">Deadline passed</span>
+      </div>
+      <p style="margin-top:16px; color:var(--text-muted); font-size:15px;">
+        When the deadline changes the recommendation, a note appears: "Adjusted for your deadline"
+      </p>
+    </div>
+    <div>
+      <div class="card card-accent" style="text-align:center; padding:32px;">
+        <p style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">Product Detail</p>
+        <div style="font-size:48px; font-weight:700; color:var(--success); font-family:'JetBrains Mono',monospace;">BUY</div>
+        <div style="font-size:16px; color:var(--text-secondary); margin-top:4px;">91.6% confidence</div>
+        <div style="margin-top:20px; padding:12px 20px; background:var(--surface2); border-radius:10px; display:inline-block;">
+          <span style="color:var(--text-muted); font-size:14px;">Need it by:</span>
+          <span style="color:var(--text); font-size:14px; font-weight:500; margin-left:8px;">Jul 10, 2026</span>
+        </div>
+        <div style="margin-top:12px;">
+          <span style="background:rgba(34,197,94,0.15); color:var(--success); padding:4px 12px; border-radius:6px; font-size:13px;">On track &bull; 13 days left</span>
+        </div>
+        <p style="color:var(--text-muted); font-size:13px; margin-top:16px; line-height:1.5;">
+          "No meaningful drop is reachable within 13 days &mdash; buying now is the right call."
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:64%"></div></div>
+</div>
+
+<!-- SLIDE 12: Forecast + Deals -->
+<div class="slide" id="s12">
+  <div class="brand-line"></div>
+  <span class="tag tag-brand">Feature Deep Dive</span>
+  <h2>Forecast Chart &amp; Deals Feed</h2>
+  <div class="two-col">
+    <div>
+      <div class="card" style="height:100%;">
+        <h3>Forecast Overlay</h3>
+        <div style="margin:20px 0; padding:20px; background:var(--surface2); border-radius:12px;">
+          <div style="display:flex; align-items:flex-end; height:120px; gap:3px;">
+            <div style="flex:1; background:var(--text-muted); border-radius:2px 2px 0 0; height:60%;"></div>
+            <div style="flex:1; background:var(--text-muted); border-radius:2px 2px 0 0; height:70%;"></div>
+            <div style="flex:1; background:var(--text-muted); border-radius:2px 2px 0 0; height:55%;"></div>
+            <div style="flex:1; background:var(--text-muted); border-radius:2px 2px 0 0; height:65%;"></div>
+            <div style="flex:1; background:var(--text-muted); border-radius:2px 2px 0 0; height:75%;"></div>
+            <div style="flex:1; background:var(--text-muted); border-radius:2px 2px 0 0; height:50%;"></div>
+            <div style="flex:1; background:var(--text-muted); border-radius:2px 2px 0 0; height:60%;"></div>
+            <div style="flex:1; border:2px dashed var(--brand-end); border-radius:2px 2px 0 0; height:55%; background:rgba(157,78,221,0.1);"></div>
+            <div style="flex:1; border:2px dashed var(--brand-end); border-radius:2px 2px 0 0; height:48%; background:rgba(157,78,221,0.1);"></div>
+            <div style="flex:1; border:2px dashed var(--brand-end); border-radius:2px 2px 0 0; height:42%; background:rgba(157,78,221,0.1);"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:8px;">
+            <span style="font-size:11px; color:var(--text-muted);">Historical</span>
+            <span style="font-size:11px; color:var(--brand-end);">Forecast</span>
+          </div>
+        </div>
+        <ul style="font-size:14px;">
+          <li>Dashed line for predicted price</li>
+          <li>Semi-transparent band for confidence interval</li>
+          <li>Connects seamlessly to historical data</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="height:100%;">
+        <h3>Best Deals Right Now</h3>
+        <p style="margin-bottom:16px;">Horizontal carousel on Discover showing BUY products with 80%+ confidence</p>
+        <div style="display:flex; gap:12px; overflow:hidden;">
+          <div style="min-width:130px; background:var(--surface2); border-radius:12px; padding:14px;">
+            <div style="width:100%; height:50px; background:var(--border); border-radius:8px; margin-bottom:8px;"></div>
+            <div style="font-size:12px; color:var(--text); font-weight:500;">AirPods Pro 2</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">$189.99</div>
+            <div style="margin-top:6px;"><span class="verdict-buy" style="font-size:13px;">BUY</span> <span style="font-size:12px; color:var(--text-muted);">92%</span></div>
+          </div>
+          <div style="min-width:130px; background:var(--surface2); border-radius:12px; padding:14px;">
+            <div style="width:100%; height:50px; background:var(--border); border-radius:8px; margin-bottom:8px;"></div>
+            <div style="font-size:12px; color:var(--text); font-weight:500;">Sony WH-1000XM5</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">$278.00</div>
+            <div style="margin-top:6px;"><span class="verdict-buy" style="font-size:13px;">BUY</span> <span style="font-size:12px; color:var(--text-muted);">85%</span></div>
+          </div>
+          <div style="min-width:130px; background:var(--surface2); border-radius:12px; padding:14px; opacity:0.5;">
+            <div style="width:100%; height:50px; background:var(--border); border-radius:8px; margin-bottom:8px;"></div>
+            <div style="font-size:12px; color:var(--text); font-weight:500;">Dyson V15</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">$549.99</div>
+            <div style="margin-top:6px;"><span class="verdict-buy" style="font-size:13px;">BUY</span> <span style="font-size:12px; color:var(--text-muted);">81%</span></div>
+          </div>
+        </div>
+        <ul style="font-size:14px; margin-top:16px;">
+          <li>Only shows when qualifying deals exist</li>
+          <li>Tapping navigates to product detail</li>
+          <li>Powered by new <code>/products/deals</code> API</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:70%"></div></div>
+</div>
+
+<!-- SLIDE 13: Social Features -->
+<div class="slide" id="s13">
+  <div class="brand-line"></div>
+  <span class="tag tag-brand">Social</span>
+  <h2>Shared Wishlists &amp; Gift Mode</h2>
+  <div class="two-col">
+    <div>
+      <h3>For the Wishlist Owner</h3>
+      <ul>
+        <li>Tap "Share Wishlist" &rarr; generates a shareable link</li>
+        <li>Toggle each item as <span class="highlight-text">Public</span> or <span style="color:var(--text-muted);">Private</span></li>
+        <li>Add occasion tags (Birthday, Christmas, etc.)</li>
+        <li>Only public items appear in the shared view</li>
+      </ul>
+      <h3 style="margin-top:28px;">For the Gift Buyer</h3>
+      <ul>
+        <li>Opens shared link &rarr; sees "{Name}'s Wishlist"</li>
+        <li><span class="highlight-text">Gift Mode</span> hides prices by default</li>
+        <li>Each item shows: name, image, category, AI verdict</li>
+        <li>"Mark as Bought" prevents duplicate gifts</li>
+        <li>Already-claimed items show as grayed out</li>
+      </ul>
+    </div>
+    <div>
+      <div class="card card-accent" style="text-align:center; padding:28px;">
+        <p style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Shared Wishlist</p>
+        <h3 style="font-size:22px; margin-bottom:20px;">Sarah's Wishlist</h3>
+        <div style="text-align:left;">
+          <div style="display:flex; align-items:center; padding:12px; background:var(--surface2); border-radius:10px; margin-bottom:8px;">
+            <div style="width:40px; height:40px; background:var(--border); border-radius:8px; margin-right:12px; flex-shrink:0;"></div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500;">AirPods Pro 2</div>
+              <div style="font-size:12px; color:var(--text-muted);">Audio</div>
+            </div>
+            <span class="verdict-buy" style="font-size:14px;">BUY</span>
+          </div>
+          <div style="display:flex; align-items:center; padding:12px; background:var(--surface2); border-radius:10px; margin-bottom:8px; opacity:0.5;">
+            <div style="width:40px; height:40px; background:var(--border); border-radius:8px; margin-right:12px; flex-shrink:0;"></div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500;">Dyson Airwrap</div>
+              <div style="font-size:12px; color:var(--text-muted);">Home Tech</div>
+            </div>
+            <span style="font-size:12px; color:var(--text-muted);">Claimed</span>
+          </div>
+          <div style="display:flex; align-items:center; padding:12px; background:var(--surface2); border-radius:10px;">
+            <div style="width:40px; height:40px; background:var(--border); border-radius:8px; margin-right:12px; flex-shrink:0;"></div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500;">Baby Brezza</div>
+              <div style="font-size:12px; color:var(--text-muted);">Baby</div>
+            </div>
+            <span style="background:var(--brand-start); color:white; padding:4px 12px; border-radius:6px; font-size:12px; cursor:pointer;">Mark as Bought</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:76%"></div></div>
+</div>
+
+<!-- SLIDE 14: Data Pipeline -->
+<div class="slide" id="s14">
+  <div class="brand-line"></div>
+  <span class="tag tag-brand">Data Pipeline</span>
+  <h2>Data Sources &amp; Optimization</h2>
+  <div class="two-col">
+    <div>
+      <h3>Current Pipeline</h3>
+      <table class="compact-table">
+        <thead><tr><th>Source</th><th>Coverage</th><th>Data</th></tr></thead>
+        <tbody>
+          <tr><td class="highlight-text">Keepa API</td><td>79 ASINs</td><td>Amazon prices, rank, reviews, 12 series</td></tr>
+          <tr><td class="highlight-text">SerpAPI</td><td>69 mapped</td><td>Walmart, Target, Best Buy, ~4.5 months</td></tr>
+        </tbody>
+      </table>
+      <h3 style="margin-top:24px;">Proposed: SerpAPI Migration</h3>
+      <table class="compact-table">
+        <thead><tr><th>Approach</th><th>Calls/Month</th><th>Cost</th></tr></thead>
+        <tbody>
+          <tr><td>Current (per-retailer)</td><td class="highlight-warn">~48,000</td><td>$275+/mo</td></tr>
+          <tr><td class="highlight">Google Immersive Product</td><td class="highlight">~4,800</td><td>$75/mo</td></tr>
+        </tbody>
+      </table>
+      <p class="small-text">5-13 retailers per call instead of 1. Better data, 90% fewer API calls.</p>
+    </div>
+    <div>
+      <h3>Untapped Keepa Endpoints</h3>
+      <div class="card" style="margin-top:12px;">
+        <ul style="font-size:14px;">
+          <li><span class="highlight-text">/deal</span> &mdash; products with recent price/rank changes</li>
+          <li><span class="highlight-text">/lightningdeal</span> &mdash; real-time lightning deals (10-min refresh)</li>
+          <li><span class="highlight-text">/tracking + webhooks</span> &mdash; push-based price alerts, no polling</li>
+          <li><span class="highlight-text">/bestsellers</span> &mdash; catalog expansion by category</li>
+          <li><span class="highlight-text">/query</span> &mdash; 200+ filter fields for product discovery</li>
+        </ul>
+      </div>
+      <h3 style="margin-top:20px;">New Data Points to Collect</h3>
+      <div class="card" style="margin-top:12px;">
+        <ul style="font-size:14px;">
+          <li><code>typical_prices</code> &mdash; Google's computed price range</li>
+          <li><code>in_stock</code> &mdash; availability as a feature</li>
+          <li>Badges ("Best Seller", "Amazon's Choice")</li>
+          <li>Product specs + GTIN for cross-retailer matching</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:82%"></div></div>
+</div>
+
+<!-- SLIDE 15: What's Done -->
+<div class="slide" id="s15">
+  <div class="brand-line"></div>
+  <span class="tag tag-success">Status</span>
+  <h2>Implementation Status</h2>
+  <div class="two-col">
+    <div>
+      <h3 style="color:var(--success);">Done</h3>
+      <ul class="checklist">
+        <li><span class="check">&#10003;</span> v3 window model trained + 16 new features</li>
+        <li><span class="check">&#10003;</span> Deadline-aware API endpoint</li>
+        <li><span class="check">&#10003;</span> Deadline picker in app</li>
+        <li><span class="check">&#10003;</span> Forecast overlay on price chart</li>
+        <li><span class="check">&#10003;</span> "Best Deals Right Now" carousel</li>
+        <li><span class="check">&#10003;</span> Advanced filters (API + app UI)</li>
+        <li><span class="check">&#10003;</span> First-run onboarding walkthrough</li>
+        <li><span class="check">&#10003;</span> Recently viewed section</li>
+        <li><span class="check">&#10003;</span> Shared wishlists + gift mode (full stack)</li>
+        <li><span class="check">&#10003;</span> Deals feed API endpoint</li>
+        <li><span class="check">&#10003;</span> Product list filtering API</li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="color:var(--warning);">Next Up</h3>
+      <ul class="checklist">
+        <li><span class="uncheck">&#9675;</span> Push notifications for price drops</li>
+        <li><span class="uncheck">&#9675;</span> Savings dashboard ("You saved $X")</li>
+        <li><span class="uncheck">&#9675;</span> Friend connections + "Friends' Wishes"</li>
+        <li><span class="uncheck">&#9675;</span> Gift occasion tags</li>
+        <li><span class="uncheck">&#9675;</span> Weekly digest emails</li>
+        <li><span class="uncheck">&#9675;</span> Search by URL / barcode scan</li>
+        <li><span class="uncheck">&#9675;</span> SerpAPI migration to Immersive Product</li>
+        <li><span class="uncheck">&#9675;</span> Auto-retrain pipeline</li>
+        <li><span class="uncheck">&#9675;</span> Per-category models</li>
+        <li><span class="uncheck">&#9675;</span> Catalog expansion (500+ products)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:88%"></div></div>
+</div>
+
+<!-- SLIDE 16: Metrics -->
+<div class="slide" id="s16">
+  <div class="brand-line"></div>
+  <span class="tag tag-brand">Metrics</span>
+  <h2>Key Metrics to Track</h2>
+  <table style="margin-top:24px;">
+    <thead>
+      <tr><th>Metric</th><th>What It Measures</th><th>Target</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="highlight-text">Prediction precision</td><td>% of BUY/WAIT calls that were correct</td><td class="highlight">&gt;85% on confident calls</td></tr>
+      <tr><td class="highlight-text">Abstain rate</td><td>% of products where model delegates to heuristic</td><td class="highlight">&lt;40% (down from 56%)</td></tr>
+      <tr><td class="highlight-text">Watchlist &rarr; purchase</td><td>Conversion from saving to buying</td><td>Baseline, then optimize</td></tr>
+      <tr><td class="highlight-text">Shared wishlist creates</td><td>Social virality / gifting adoption</td><td>Growth indicator</td></tr>
+      <tr><td class="highlight-text">Savings claimed</td><td>Dollar value delivered to users</td><td>Retention driver</td></tr>
+      <tr><td class="highlight-text">DAU / WAU ratio</td><td>Daily engagement stickiness</td><td class="highlight">&gt;30%</td></tr>
+      <tr><td class="highlight-text">API cost / product / day</td><td>Pipeline efficiency</td><td class="highlight">&lt;$0.05 after migration</td></tr>
+    </tbody>
+  </table>
+  <div class="progress-bar"><div class="progress-fill" style="width:94%"></div></div>
+</div>
+
+<!-- SLIDE 17: Thank You -->
+<div class="slide" id="s17">
+  <div class="brand-line"></div>
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+    <h1 style="font-size:64px;">a<span style="color:var(--brand-start);">.</span>iwish</h1>
+    <p class="subtitle" style="margin-top:16px; max-width:500px; text-align:center;">
+      AI-powered price intelligence.<br>Buy at the right moment.
+    </p>
+    <div style="margin-top:48px; display:flex; gap:32px;">
+      <div>
+        <div style="font-size:36px; font-weight:700; color:var(--success);">11</div>
+        <div style="font-size:14px; color:var(--text-muted); margin-top:4px;">Features shipped</div>
+      </div>
+      <div>
+        <div style="font-size:36px; font-weight:700; color:var(--brand-end);">3</div>
+        <div style="font-size:14px; color:var(--text-muted); margin-top:4px;">Repos updated</div>
+      </div>
+      <div>
+        <div style="font-size:36px; font-weight:700; color:var(--brand-start);">61</div>
+        <div style="font-size:14px; color:var(--text-muted); margin-top:4px;">ML features</div>
+      </div>
+      <div>
+        <div style="font-size:36px; font-weight:700; color:var(--warning);">95.6%</div>
+        <div style="font-size:14px; color:var(--text-muted); margin-top:4px;">BUY precision (k=3)</div>
+      </div>
+    </div>
+    <p style="margin-top:48px; color:var(--text-muted); font-size:15px;">Questions?</p>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+</div>
+
+<div class="nav-hint" id="navHint">&#8592; &#8594; arrow keys to navigate</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let current = 0;
+
+  function show(n) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, slides.length - 1));
+    slides[current].classList.add('active');
+    const num = document.querySelectorAll('.slide-number');
+    num.forEach(el => el.remove());
+    const sn = document.createElement('div');
+    sn.className = 'slide-number';
+    sn.textContent = `${current + 1} / ${slides.length}`;
+    slides[current].appendChild(sn);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); show(current + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); show(current - 1); }
+    if (e.key === 'Home') { e.preventDefault(); show(0); }
+    if (e.key === 'End') { e.preventDefault(); show(slides.length - 1); }
+  });
+
+  // Touch support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) { diff > 0 ? show(current + 1) : show(current - 1); }
+  });
+
+  // Click navigation (left/right halves)
+  document.addEventListener('click', (e) => {
+    if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
+    e.clientX > window.innerWidth / 2 ? show(current + 1) : show(current - 1);
+  });
+
+  show(0);
+</script>
+</body>
+</html>

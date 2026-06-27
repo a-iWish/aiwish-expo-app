@@ -89,6 +89,7 @@ export function useProductDetail(productId: string) {
   const [comparisonRows, setComparisonRows] = useState<RetailerPriceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deadline, setDeadline] = useState<Date | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,9 +98,12 @@ export function useProductDetail(productId: string) {
       setLoading(true);
       setError(null);
       try {
+        const deadlineStr = deadline
+          ? deadline.toISOString().split('T')[0]
+          : null;
         const [detail, pred, ret] = await Promise.all([
           fetchProduct(productId),
-          fetchPrediction(productId).catch(() => null),
+          fetchPrediction(productId, deadlineStr).catch(() => null),
           fetchRetailers(productId).catch(() => ({ retailers: [] as string[] })),
         ]);
 
@@ -204,7 +208,7 @@ export function useProductDetail(productId: string) {
 
     load();
     return () => { cancelled = true; };
-  }, [productId]);
+  }, [productId, deadline]);
 
   const selectRetailer = useCallback(
     (retailer: string | null) => {
@@ -228,5 +232,7 @@ export function useProductDetail(productId: string) {
     comparisonRows,
     loading,
     error,
+    deadline,
+    setDeadline,
   };
 }

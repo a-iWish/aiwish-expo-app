@@ -1,13 +1,19 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
 
 export type RootStackParamList = {
+  Onboarding: undefined;
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   ProductDetail: { productId: string };
+  SharedWishlist: { token: string };
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
   EditProfile: undefined;
   ChangePassword: undefined;
+  Friends: undefined;
+  Compare: undefined;
+  SharedLists: undefined;
+  SharedListDetail: { listId: string };
 };
 
 export type MainTabParamList = {

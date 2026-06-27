@@ -8,6 +8,14 @@ import {
   RetailersResponse,
   WishlistItem,
   WishlistResponse,
+  ShareWishlistResponse,
+  SharedWishlistResponse,
+  MarkBoughtResponse,
+  FollowingResponse,
+  FriendsWishesResponse,
+  SharedListSummary,
+  SharedListsResponse,
+  SharedListDetail,
 } from '../types/product';
 import { apiFetch } from './httpClient';
 
@@ -46,6 +54,10 @@ function normalizePredictionResponse(raw: any): PredictionResponse {
     estimated_best_price: raw?.estimated_best_price ?? raw?.estimatedBestPrice ?? null,
     estimated_wait_days: raw?.estimated_wait_days ?? raw?.estimatedWaitDays ?? null,
     reasons: Array.isArray(reasons) ? reasons.map((r: any) => String(r)) : [],
+    deadline: raw?.deadline ?? null,
+    days_until_deadline: raw?.days_until_deadline ?? raw?.daysUntilDeadline ?? null,
+    deadline_urgency: raw?.deadline_urgency ?? raw?.deadlineUrgency ?? null,
+    deadline_adjusted: raw?.deadline_adjusted ?? raw?.deadlineAdjusted ?? null,
   };
 }
 
@@ -54,12 +66,57 @@ function request<T>(path: string): Promise<T> {
   return apiFetch<T>(path, { method: 'GET', auth: false });
 }
 
-export function fetchProducts(): Promise<ProductListResponse> {
-  return request<ProductListResponse>('/api/products');
+export interface ProductFilters {
+  verdict?: string | null;
+  minConfidence?: number | null;
+  category?: string | null;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  sortBy?: string | null;
+}
+
+export function fetchProducts(filters?: ProductFilters): Promise<ProductListResponse> {
+  let url = '/api/products';
+  const params: string[] = [];
+
+  if (filters?.verdict) params.push(`verdict=${encodeURIComponent(filters.verdict)}`);
+  if (filters?.minConfidence != null) params.push(`min_confidence=${filters.minConfidence}`);
+  if (filters?.category) params.push(`category=${encodeURIComponent(filters.category)}`);
+  if (filters?.minPrice != null) params.push(`min_price=${filters.minPrice}`);
+  if (filters?.maxPrice != null) params.push(`max_price=${filters.maxPrice}`);
+  if (filters?.sortBy) params.push(`sort_by=${encodeURIComponent(filters.sortBy)}`);
+
+  if (params.length > 0) url += `?${params.join('&')}`;
+
+  return request<ProductListResponse>(url);
 }
 
 export function fetchProduct(id: string): Promise<ProductDetail> {
   return request<ProductDetail>(`/api/products/${id}`);
+}
+
+/**
+ * Dedicated "Deals Right Now" feed: BUY verdict + high confidence + near 90-day
+ * low, computed server-side from Keepa stats. More accurate than the client-side
+ * BUY/confidence filter, which only sees whatever page of products is loaded.
+ */
+export function fetchDeals(): Promise<ProductListResponse> {
+  return request<ProductListResponse>('/api/products/deals');
+}
+
+/**
+ * Search the catalog by free-text name and/or a pasted product URL (an Amazon
+ * ASIN is extracted server-side and matched against the existing catalog).
+ */
+export function searchProducts(opts: {
+  q?: string | null;
+  url?: string | null;
+}): Promise<ProductListResponse> {
+  const params: string[] = [];
+  if (opts.q) params.push(`q=${encodeURIComponent(opts.q)}`);
+  if (opts.url) params.push(`url=${encodeURIComponent(opts.url)}`);
+  if (params.length === 0) return Promise.resolve({ products: [], count: 0 });
+  return request<ProductListResponse>(`/api/products/search?${params.join('&')}`);
 }
 
 export function fetchPriceHistory(
@@ -114,8 +171,11 @@ export function fetchRetailers(id: string): Promise<RetailersResponse> {
 
 export function fetchPrediction(
   id: string,
+  deadline?: string | null,
 ): Promise<PredictionResponse | null> {
-  return request<any>(`/api/products/${id}/prediction`).then((raw) => {
+  let url = `/api/products/${id}/prediction`;
+  if (deadline) url += `?deadline=${encodeURIComponent(deadline)}`;
+  return request<any>(url).then((raw) => {
     if (!raw) return null;
     return normalizePredictionResponse(raw);
   });
@@ -140,6 +200,166 @@ export function addToWishlist(
 
 export function removeFromWishlist(productId: string): Promise<void> {
   return apiFetch<void>(`/api/wishlist/${productId}`, {
+    method: 'DELETE',
+    auth: true,
+  });
+}
+
+// --- Social: friend connections + Friends' Wishes (all require auth) --- //
+
+export function followUser(email: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>('/api/social/follow', {
+    method: 'POST',
+    auth: true,
+    body: { email },
+  });
+}
+
+export function unfollowUser(followingId: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/api/social/follow/${followingId}`, {
+    method: 'DELETE',
+    auth: true,
+  });
+}
+
+export function fetchFollowing(): Promise<FollowingResponse> {
+  return apiFetch<FollowingResponse>('/api/social/following', {
+    method: 'GET',
+    auth: true,
+  });
+}
+
+export function fetchFriendsWishes(): Promise<FriendsWishesResponse> {
+  return apiFetch<FriendsWishesResponse>('/api/social/friends-wishes', {
+    method: 'GET',
+    auth: true,
+  });
+}
+
+// --- Push notifications: register/unregister an Expo push token (auth) --- //
+
+export function registerPushToken(
+  token: string,
+  platform?: string | null,
+): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>('/api/notifications/register', {
+    method: 'POST',
+    auth: true,
+    body: { token, platform: platform ?? null },
+  });
+}
+
+export function unregisterPushToken(token: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>('/api/notifications/register', {
+    method: 'DELETE',
+    auth: true,
+    body: { token },
+  });
+}
+
+export function shareWishlist(): Promise<ShareWishlistResponse> {
+  return apiFetch<ShareWishlistResponse>('/api/wishlist/share', {
+    method: 'POST',
+    auth: true,
+  });
+}
+
+export function getSharedWishlist(
+  token: string,
+  giftMode = false,
+): Promise<SharedWishlistResponse> {
+  let url = `/api/wishlist/shared/${encodeURIComponent(token)}`;
+  if (giftMode) url += '?gift_mode=true';
+  return apiFetch<SharedWishlistResponse>(url, { method: 'GET', auth: false });
+}
+
+export function updateWishlistItem(
+  productId: string,
+  updates: { is_public?: boolean; occasion?: string; target_date?: string },
+): Promise<WishlistItem> {
+  return apiFetch<WishlistItem>(`/api/wishlist/${productId}`, {
+    method: 'PATCH',
+    auth: true,
+    body: updates,
+  });
+}
+
+export function markBought(
+  token: string,
+  productId: string,
+): Promise<MarkBoughtResponse> {
+  return apiFetch<MarkBoughtResponse>(
+    `/api/wishlist/shared/${encodeURIComponent(token)}/mark-bought/${productId}`,
+    { method: 'POST', auth: true },
+  );
+}
+
+// --- Collaborative lists: co-owned wishlists joined via invite code (auth) --- //
+
+export function createSharedList(
+  name: string,
+  occasion?: string | null,
+): Promise<SharedListSummary> {
+  return apiFetch<SharedListSummary>('/api/lists', {
+    method: 'POST',
+    auth: true,
+    body: { name, occasion: occasion ?? null },
+  });
+}
+
+export function joinSharedList(inviteCode: string): Promise<SharedListSummary> {
+  return apiFetch<SharedListSummary>('/api/lists/join', {
+    method: 'POST',
+    auth: true,
+    body: { invite_code: inviteCode },
+  });
+}
+
+export function fetchSharedLists(): Promise<SharedListsResponse> {
+  return apiFetch<SharedListsResponse>('/api/lists', { method: 'GET', auth: true });
+}
+
+export function fetchSharedListDetail(listId: string): Promise<SharedListDetail> {
+  return apiFetch<SharedListDetail>(`/api/lists/${listId}`, {
+    method: 'GET',
+    auth: true,
+  });
+}
+
+export function addSharedListItem(
+  listId: string,
+  productId: string,
+): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/api/lists/${listId}/items`, {
+    method: 'POST',
+    auth: true,
+    body: { product_id: productId },
+  });
+}
+
+export function removeSharedListItem(
+  listId: string,
+  productId: string,
+): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/api/lists/${listId}/items/${productId}`, {
+    method: 'DELETE',
+    auth: true,
+  });
+}
+
+export function claimSharedListItem(
+  listId: string,
+  productId: string,
+  claim: boolean,
+): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(
+    `/api/lists/${listId}/items/${productId}/claim?claim=${claim ? 'true' : 'false'}`,
+    { method: 'POST', auth: true },
+  );
+}
+
+export function leaveSharedList(listId: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/api/lists/${listId}/leave`, {
     method: 'DELETE',
     auth: true,
   });

@@ -8,7 +8,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Svg, { Path, Line, Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
-import { MonthlyPricePoint, RetailerPriceSeries } from '../types/product';
+import { MonthlyPricePoint, RetailerPriceSeries, ForecastPoint } from '../types/product';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeColors, spacing, borderRadius, fontSize } from '../styles/theme';
 import { retailerLineColor } from '../utils/retailerChartColors';
@@ -20,6 +20,8 @@ interface PriceChartProps {
   selectedRetailer?: string | null;
   onRetailerChange?: (retailer: string | null) => void;
   amazonPrice?: number | null;
+  /** Forecast points to render as a dashed line with confidence band. */
+  forecast?: ForecastPoint[];
 }
 
 function unionMonths(series: RetailerPriceSeries[]): string[] {
@@ -80,6 +82,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   selectedRetailer = null,
   onRetailerChange,
   amazonPrice,
+  forecast = [],
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -99,9 +102,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const H_PAD = 10;
   const chartHeight = multiMode ? 300 : 280;
   const basePlot = Math.max(268, windowWidth - 40 - Y_AXIS_W);
+  const hasForecast = !multiMode && forecast.length > 0 && priceHistory.length > 0;
+  const forecastExtraPoints = hasForecast ? forecast.length : 0;
   const pointCount = multiMode
     ? Math.max(monthsMulti.length, 1)
-    : Math.max(priceHistory.length, 1);
+    : Math.max(priceHistory.length + forecastExtraPoints, 1);
   const minPxPerPoint = multiMode ? 58 : 46;
   const plotInnerWidth = Math.max(basePlot, Math.min(pointCount * minPxPerPoint, 1800));
   const needsHScroll = plotInnerWidth > basePlot + 0.5;
@@ -128,32 +133,85 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     }
     const ph = priceHistory;
     if (ph.length === 0) return { dataMin: 0, dataMax: 1, yMin: 0, yMax: 1, yRange: 1, yTickValues: [0, 0.25, 0.5, 0.75, 1], activeHistory: ph };
-    const dMin = Math.min(...ph.map((p) => p.min_price));
-    const dMax = Math.max(...ph.map((p) => p.max_price));
+    let dMin = Math.min(...ph.map((p) => p.min_price));
+    let dMax = Math.max(...ph.map((p) => p.max_price));
+    // Expand range to include forecast bounds
+    if (forecast.length > 0) {
+      for (const fp of forecast) {
+        dMin = Math.min(dMin, fp.lower);
+        dMax = Math.max(dMax, fp.upper);
+      }
+    }
     const rangeMin = amazonPrice != null ? Math.min(dMin, amazonPrice) : dMin;
     const rangeMax = amazonPrice != null ? Math.max(dMax, amazonPrice) : dMax;
     const yPad = (rangeMax - rangeMin) * 0.1 || 1;
     const yMinV = rangeMin - yPad; const yMaxV = rangeMax + yPad; const yRangeV = yMaxV - yMinV;
     const yTicks = 5;
     return { dataMin: dMin, dataMax: dMax, yMin: yMinV, yMax: yMaxV, yRange: yRangeV, yTickValues: Array.from({ length: yTicks }, (_, i) => yMinV + (yRangeV / (yTicks - 1)) * i), activeHistory: ph };
-  }, [multiMode, monthsMulti, allRetailerSeries, priceHistory, amazonPrice]);
+  }, [multiMode, monthsMulti, allRetailerSeries, priceHistory, amazonPrice, forecast]);
 
   const toX = (i: number, len: number) =>
     H_PAD + (len > 1 ? (i / (len - 1)) * plotInnerWidth : plotInnerWidth / 2);
   const toY = (val: number) => chartHeight - ((val - yMin) / yRange) * chartHeight;
 
+  /** Total series length for X coordinate mapping (historical + forecast). */
+  const totalLen = hasForecast
+    ? activeHistory.length + forecast.length
+    : 0; // only used when hasForecast is true
+
   const avgLinePath = useMemo(() => {
     if (multiMode || activeHistory.length === 0) return '';
-    return activeHistory.map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(i, activeHistory.length).toFixed(1)},${toY(p.avg_price).toFixed(1)}`).join(' ');
-  }, [multiMode, activeHistory, plotInnerWidth, yMin, yRange, chartHeight]);
+    const len = hasForecast ? totalLen : activeHistory.length;
+    return activeHistory.map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(i, len).toFixed(1)},${toY(p.avg_price).toFixed(1)}`).join(' ');
+  }, [multiMode, activeHistory, plotInnerWidth, yMin, yRange, chartHeight, hasForecast, totalLen]);
 
   const minMaxAreaPath = useMemo(() => {
     if (multiMode || activeHistory.length === 0) return '';
     const ph = activeHistory;
-    return ph.map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(i, ph.length).toFixed(1)},${toY(p.max_price).toFixed(1)}`).join(' ')
-      + [...ph].reverse().map((p, i) => `L${toX(ph.length - 1 - i, ph.length).toFixed(1)},${toY(p.min_price).toFixed(1)}`).join(' ')
+    const len = hasForecast ? totalLen : ph.length;
+    return ph.map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(i, len).toFixed(1)},${toY(p.max_price).toFixed(1)}`).join(' ')
+      + [...ph].reverse().map((p, i) => `L${toX(ph.length - 1 - i, len).toFixed(1)},${toY(p.min_price).toFixed(1)}`).join(' ')
       + ' Z';
-  }, [multiMode, activeHistory, plotInnerWidth, yMin, yRange, chartHeight]);
+  }, [multiMode, activeHistory, plotInnerWidth, yMin, yRange, chartHeight, hasForecast, totalLen]);
+
+  /** Forecast dashed line path (predicted price). */
+  const forecastLinePath = useMemo(() => {
+    if (!hasForecast) return '';
+    const lastHistIdx = activeHistory.length - 1;
+    const lastHistPrice = activeHistory[lastHistIdx]?.avg_price;
+    if (lastHistPrice == null) return '';
+    let d = `M${toX(lastHistIdx, totalLen).toFixed(1)},${toY(lastHistPrice).toFixed(1)}`;
+    forecast.forEach((fp, i) => {
+      const x = toX(activeHistory.length + i, totalLen);
+      d += `L${x.toFixed(1)},${toY(fp.price).toFixed(1)}`;
+    });
+    return d;
+  }, [hasForecast, activeHistory, forecast, totalLen, plotInnerWidth, yMin, yRange, chartHeight]);
+
+  /** Forecast confidence band (upper/lower fill area). */
+  const forecastBandPath = useMemo(() => {
+    if (!hasForecast) return '';
+    const lastHistIdx = activeHistory.length - 1;
+    const lastHistPrice = activeHistory[lastHistIdx]?.avg_price;
+    if (lastHistPrice == null) return '';
+    // Start from the last historical point for upper bound
+    let d = `M${toX(lastHistIdx, totalLen).toFixed(1)},${toY(lastHistPrice).toFixed(1)}`;
+    // Upper line forward
+    forecast.forEach((fp, i) => {
+      const x = toX(activeHistory.length + i, totalLen);
+      d += `L${x.toFixed(1)},${toY(fp.upper).toFixed(1)}`;
+    });
+    // Lower line backward
+    [...forecast].reverse().forEach((fp, i) => {
+      const origIdx = forecast.length - 1 - i;
+      const x = toX(activeHistory.length + origIdx, totalLen);
+      d += `L${x.toFixed(1)},${toY(fp.lower).toFixed(1)}`;
+    });
+    // Close back to last historical point
+    d += `L${toX(lastHistIdx, totalLen).toFixed(1)},${toY(lastHistPrice).toFixed(1)}`;
+    d += ' Z';
+    return d;
+  }, [hasForecast, activeHistory, forecast, totalLen, plotInnerWidth, yMin, yRange, chartHeight]);
 
   const multiAvgPaths = useMemo(() => {
     if (!multiMode || monthsMulti.length === 0) return [];
@@ -352,23 +410,51 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         {showAmazonRefLine && (
                           <Line x1={0} y1={toY(amazonPrice!)} x2={svgWidth} y2={toY(amazonPrice!)} stroke={referenceColor} strokeWidth={2} strokeDasharray="8,5" strokeLinecap="round" opacity={0.85} />
                         )}
+                        {/* Forecast overlay: confidence band + dashed line */}
+                        {hasForecast && forecastBandPath && (
+                          <Path d={forecastBandPath} fill={colors.brandEnd} opacity={0.10} />
+                        )}
+                        {hasForecast && forecastLinePath && (
+                          <Path
+                            d={forecastLinePath}
+                            fill="none"
+                            stroke={colors.brandEnd}
+                            strokeWidth={2.5}
+                            strokeDasharray="8,5"
+                            strokeLinejoin="round"
+                            strokeLinecap="round"
+                            opacity={0.85}
+                          />
+                        )}
                         {activeHistory.map((p, i) => {
                           const isSel = selectedIndex === i;
+                          const len = hasForecast ? totalLen : activeHistory.length;
                           const isEndpoint = i === 0 || i === activeHistory.length - 1;
                           return (
                             <React.Fragment key={i}>
                               {isSel && (
                                 <>
-                                  <Circle cx={toX(i, activeHistory.length)} cy={toY(p.max_price)} r={4.5} fill={colors.textMuted} stroke={colors.background} strokeWidth={1.5} />
-                                  <Circle cx={toX(i, activeHistory.length)} cy={toY(p.min_price)} r={4.5} fill={colors.textMuted} stroke={colors.background} strokeWidth={1.5} />
+                                  <Circle cx={toX(i, len)} cy={toY(p.max_price)} r={4.5} fill={colors.textMuted} stroke={colors.background} strokeWidth={1.5} />
+                                  <Circle cx={toX(i, len)} cy={toY(p.min_price)} r={4.5} fill={colors.textMuted} stroke={colors.background} strokeWidth={1.5} />
                                 </>
                               )}
                               {(isSel || isEndpoint) && (
-                                <Circle cx={toX(i, activeHistory.length)} cy={toY(p.avg_price)} r={isSel ? 6 : 3.5} fill={isSel ? chartLineColor : colors.surface} stroke={chartLineColor} strokeWidth={isSel ? 2.75 : 2} />
+                                <Circle cx={toX(i, len)} cy={toY(p.avg_price)} r={isSel ? 6 : 3.5} fill={isSel ? chartLineColor : colors.surface} stroke={chartLineColor} strokeWidth={isSel ? 2.75 : 2} />
                               )}
                             </React.Fragment>
                           );
                         })}
+                        {/* Forecast endpoint dot */}
+                        {hasForecast && forecast.length > 0 && (
+                          <Circle
+                            cx={toX(totalLen - 1, totalLen)}
+                            cy={toY(forecast[forecast.length - 1].price)}
+                            r={4}
+                            fill={colors.brandEnd}
+                            stroke={colors.surface}
+                            strokeWidth={2}
+                          />
+                        )}
                       </>
                     )}
                   </Svg>
@@ -456,6 +542,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <View style={styles.legendItem}>
                   <View style={styles.legendDashed} />
                   <Text style={styles.legendText}>Amazon</Text>
+                </View>
+              )}
+              {hasForecast && (
+                <View style={styles.legendItem}>
+                  <View style={styles.legendForecast} />
+                  <Text style={styles.legendText}>Forecast</Text>
                 </View>
               )}
             </View>
@@ -701,6 +793,14 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 1.5,
       backgroundColor: colors.warning,
       marginRight: spacing.xs,
+    },
+    legendForecast: {
+      width: 18,
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: colors.brandEnd,
+      marginRight: spacing.xs,
+      opacity: 0.85,
     },
     legendText: {
       fontSize: fontSize.xs,

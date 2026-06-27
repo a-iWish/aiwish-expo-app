@@ -144,12 +144,120 @@ export interface ForecastPoint {
 export interface WishlistItem {
   product_id: string;
   saved_price?: number | null;
+  is_public?: boolean;
+  occasion?: string | null;
+  marked_bought_by?: string | null;
   created_at: string;
 }
 
 export interface WishlistResponse {
   items: WishlistItem[];
   count: number;
+}
+
+export interface ShareWishlistResponse {
+  share_url: string;
+  token: string;
+}
+
+export interface SharedWishlistItem {
+  product_id: string;
+  name: string;
+  image_url?: string | null;
+  category?: string | null;
+  current_price?: number | null;
+  recommendation?: string | null;
+  confidence?: number | null;
+  is_public: boolean;
+  occasion?: string | null;
+  marked_bought_by?: string | null;
+}
+
+export interface SharedWishlistResponse {
+  owner_name: string;
+  items: SharedWishlistItem[];
+  count: number;
+}
+
+export interface MarkBoughtResponse {
+  product_id: string;
+  marked_bought_by: string;
+}
+
+/** A user the current account follows (GET /api/social/following). */
+export interface FollowedUser {
+  id: string;
+  email: string;
+  full_name?: string | null;
+}
+
+export interface FollowingResponse {
+  following: FollowedUser[];
+}
+
+/** A public wishlist entry from someone you follow (GET /api/social/friends-wishes). */
+export interface FriendWishItem {
+  owner_id: string;
+  owner_name?: string | null;
+  product_id: string;
+  name: string;
+  image_url?: string | null;
+  category?: string | null;
+  current_price?: number | null;
+  recommendation?: string | null;
+  occasion?: string | null;
+  marked_bought_by?: string | null;
+}
+
+export interface FriendsWishesResponse {
+  items: FriendWishItem[];
+  count: number;
+}
+
+// --- Collaborative lists (co-owned wishlists joined via invite code) --- //
+
+export interface SharedListSummary {
+  id: string;
+  name: string;
+  occasion?: string | null;
+  invite_code: string;
+  role: string;
+  member_count: number;
+  item_count: number;
+}
+
+export interface SharedListsResponse {
+  lists: SharedListSummary[];
+}
+
+export interface SharedListMember {
+  user_id: string;
+  full_name?: string | null;
+  email: string;
+  role: string;
+}
+
+export interface SharedListItem {
+  product_id: string;
+  name: string;
+  image_url?: string | null;
+  category?: string | null;
+  current_price?: number | null;
+  recommendation?: string | null;
+  added_by: string;
+  added_by_name?: string | null;
+  claimed_by?: string | null;
+  claimed_by_name?: string | null;
+}
+
+export interface SharedListDetail {
+  id: string;
+  name: string;
+  occasion?: string | null;
+  invite_code: string;
+  role: string;
+  members: SharedListMember[];
+  items: SharedListItem[];
 }
 
 export interface PredictionResponse {
@@ -169,4 +277,12 @@ export interface PredictionResponse {
   estimated_best_price?: number | null;
   estimated_wait_days?: number | null;
   reasons: string[];
+  /** Echoed deadline date (ISO string) when ?deadline= was passed. */
+  deadline?: string | null;
+  /** Days remaining until the deadline. */
+  days_until_deadline?: number | null;
+  /** Urgency classification based on how close the deadline is. */
+  deadline_urgency?: 'ok' | 'tight' | 'passed' | null;
+  /** Whether the prediction was adjusted to account for the deadline. */
+  deadline_adjusted?: boolean | null;
 }

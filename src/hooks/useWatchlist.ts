@@ -131,6 +131,7 @@ export function useWatchlist() {
 
   return {
     ids,
+    items,
     meta,
     add,
     remove,
