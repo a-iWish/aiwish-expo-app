@@ -15,7 +15,7 @@ import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
-import { useProducts } from '../hooks/useProducts';
+import { useProducts, useDeals, useProductSearch } from '../hooks/useProducts';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { ProductFilters } from '../services/api';
 import { Product } from '../types/product';
@@ -330,17 +330,26 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
   }, []);
 
   const { products, loading, error, refetch } = useProducts(apiFilters);
+  const { deals: apiDeals } = useDeals();
   const { recentIds } = useRecentlyViewed();
 
-  /** Products with high-confidence BUY recommendation for the deals carousel. */
-  const deals = useMemo(
-    () =>
-      products.filter((p) => {
-        const verdict = normalizeVerdict(p.recommendation);
-        return verdict === 'BUY' && (p.confidence ?? 0) >= 80;
-      }),
-    [products],
-  );
+  // Server-side catalog search (matches a pasted product URL by ASIN, or any
+  // name not on the currently loaded page). Layered on top of the local filter.
+  const { results: searchResults, active: searchActive } = useProductSearch(query);
+  const queryIsUrl = /^https?:\/\//i.test(query.trim());
+
+  /**
+   * Deals carousel: prefer the server-ranked /deals feed; fall back to a
+   * client-side BUY + high-confidence filter when the endpoint returns nothing
+   * (older API build or missing Keepa stats).
+   */
+  const deals = useMemo(() => {
+    if (apiDeals.length > 0) return apiDeals;
+    return products.filter((p) => {
+      const verdict = normalizeVerdict(p.recommendation);
+      return verdict === 'BUY' && (p.confidence ?? 0) >= 80;
+    });
+  }, [apiDeals, products]);
 
   /** Recently viewed products matched from the loaded product list. */
   const recentlyViewedProducts = useMemo(() => {
@@ -381,6 +390,10 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   const filteredProducts = useMemo(() => {
+    // A pasted URL can't match the local list — defer entirely to the
+    // server's ASIN lookup so the user lands on the catalog product.
+    if (queryIsUrl) return searchActive ? searchResults : [];
+
     let list =
       selectedCategory && selectedCategory !== 'all'
         ? products.filter((p) => p.category === selectedCategory)
@@ -394,6 +407,11 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
           (p.category ?? '').toLowerCase().includes(q) ||
           (p.retailer ?? '').toLowerCase().includes(q),
       );
+      // Nothing on the loaded page matched — fall back to server search so the
+      // result set isn't limited to the current product page.
+      if (list.length === 0 && searchActive && searchResults.length > 0) {
+        return searchResults;
+      }
     }
 
     if (sortMode === 'verdict') {
@@ -415,7 +433,7 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     return list;
-  }, [products, selectedCategory, sortMode, query]);
+  }, [products, selectedCategory, sortMode, query, queryIsUrl, searchActive, searchResults]);
 
   const handleProductPress = useCallback(
     (product: Product) => {

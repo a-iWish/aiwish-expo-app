@@ -18,6 +18,10 @@ import {
   UpdateProfileParams,
 } from '../services/auth';
 import {
+  registerForPushNotifications,
+  unregisterForPushNotifications,
+} from '../services/notifications';
+import {
   registerSessionCallbacks,
   setSessionTokens,
 } from '../services/session';
@@ -69,11 +73,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const logout = useCallback(async () => {
+    // Best-effort: drop this device's push token before tearing down the session.
+    await unregisterForPushNotifications();
     setSessionTokens(null);
     await clearTokens();
     setUser(null);
     setStatus('unauthenticated');
   }, []);
+
+  // Register this device for price-drop push notifications once authenticated.
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    registerForPushNotifications().catch(() => undefined);
+  }, [status]);
 
   // Bridge token refresh / forced-logout events from the HTTP client.
   useEffect(() => {

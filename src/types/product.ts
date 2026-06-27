@@ -184,6 +184,82 @@ export interface MarkBoughtResponse {
   marked_bought_by: string;
 }
 
+/** A user the current account follows (GET /api/social/following). */
+export interface FollowedUser {
+  id: string;
+  email: string;
+  full_name?: string | null;
+}
+
+export interface FollowingResponse {
+  following: FollowedUser[];
+}
+
+/** A public wishlist entry from someone you follow (GET /api/social/friends-wishes). */
+export interface FriendWishItem {
+  owner_id: string;
+  owner_name?: string | null;
+  product_id: string;
+  name: string;
+  image_url?: string | null;
+  category?: string | null;
+  current_price?: number | null;
+  recommendation?: string | null;
+  occasion?: string | null;
+  marked_bought_by?: string | null;
+}
+
+export interface FriendsWishesResponse {
+  items: FriendWishItem[];
+  count: number;
+}
+
+// --- Collaborative lists (co-owned wishlists joined via invite code) --- //
+
+export interface SharedListSummary {
+  id: string;
+  name: string;
+  occasion?: string | null;
+  invite_code: string;
+  role: string;
+  member_count: number;
+  item_count: number;
+}
+
+export interface SharedListsResponse {
+  lists: SharedListSummary[];
+}
+
+export interface SharedListMember {
+  user_id: string;
+  full_name?: string | null;
+  email: string;
+  role: string;
+}
+
+export interface SharedListItem {
+  product_id: string;
+  name: string;
+  image_url?: string | null;
+  category?: string | null;
+  current_price?: number | null;
+  recommendation?: string | null;
+  added_by: string;
+  added_by_name?: string | null;
+  claimed_by?: string | null;
+  claimed_by_name?: string | null;
+}
+
+export interface SharedListDetail {
+  id: string;
+  name: string;
+  occasion?: string | null;
+  invite_code: string;
+  role: string;
+  members: SharedListMember[];
+  items: SharedListItem[];
+}
+
 export interface PredictionResponse {
   product_id: string;
   model_name: string;

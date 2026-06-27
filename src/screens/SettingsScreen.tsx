@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -50,6 +50,11 @@ export const SettingsScreen: React.FC = () => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScreenHeader title="Settings" />
 
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.section}>
         <AppText variant="meta" style={styles.sectionLabel}>
           Account
@@ -93,6 +98,32 @@ export const SettingsScreen: React.FC = () => {
               accessibilityRole="button"
             >
               <AppText variant="body">Change password</AppText>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+            <View style={styles.divider} />
+            <Pressable
+              style={styles.row}
+              onPress={() => navigation.navigate('Friends')}
+              accessibilityRole="button"
+            >
+              <AppText variant="body">Friends' Wishes</AppText>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+            <View style={styles.divider} />
+            <Pressable
+              style={styles.row}
+              onPress={() => navigation.navigate('SharedLists')}
+              accessibilityRole="button"
+            >
+              <AppText variant="body">Shared Lists</AppText>
               <Ionicons
                 name="chevron-forward"
                 size={20}
@@ -186,28 +217,7 @@ export const SettingsScreen: React.FC = () => {
           Editorial light and dark themes tuned for verdict readability.
         </AppText>
       </View>
-
-      <View style={styles.section}>
-        <AppText variant="meta" style={styles.sectionLabel}>
-          About
-        </AppText>
-        <View style={styles.listGroup}>
-          <View style={styles.row}>
-            <AppText variant="body">Version</AppText>
-            <AppText variant="caption">{APP_VERSION}</AppText>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.row}>
-            <AppText variant="body">AI model</AppText>
-            <AppText variant="caption">RF + XGBoost ensemble</AppText>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.row}>
-            <AppText variant="body">Products tracked</AppText>
-            <AppText variant="caption">80</AppText>
-          </View>
-        </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -217,6 +227,12 @@ const createStyles = (colors: ThemeColors) =>
     container: {
       flex: 1,
       backgroundColor: colors.background,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: spacing.xxl,
     },
     section: {
       paddingHorizontal: spacing.md,

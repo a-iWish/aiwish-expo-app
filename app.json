@@ -3,6 +3,7 @@
     "name": "a.iwish",
     "slug": "aiwish",
     "version": "1.0.0",
+    "scheme": "aiwish",
     "orientation": "portrait",
     "icon": "./assets/aiwish-nobg.png",
     "userInterfaceStyle": "automatic",

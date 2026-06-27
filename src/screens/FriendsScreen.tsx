@@ -1,0 +1,315 @@
+import React, { useMemo, useState, useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  Image,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { RootStackParamList } from '../navigation/types';
+import { FriendWishItem } from '../types/product';
+import {
+  followUser,
+  unfollowUser,
+  fetchFollowing,
+  fetchFriendsWishes,
+} from '../services/api';
+import { AppText, Button } from '../components';
+import { RecommendationBadge } from '../components/RecommendationBadge';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors, spacing, borderRadius } from '../styles/theme';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Friends'>;
+
+const FOLLOWING_KEY = ['social', 'following'] as const;
+const WISHES_KEY = ['social', 'friends-wishes'] as const;
+
+const WishRow = React.memo(function WishRow({
+  item,
+  colors,
+  onPress,
+}: {
+  item: FriendWishItem;
+  colors: ThemeColors;
+  onPress: (productId: string) => void;
+}) {
+  const styles = useMemo(() => createItemStyles(colors), [colors]);
+  return (
+    <Pressable style={styles.card} onPress={() => onPress(item.product_id)}>
+      {item.image_url ? (
+        <Image source={{ uri: item.image_url }} style={styles.thumb} resizeMode="contain" />
+      ) : (
+        <View style={[styles.thumb, styles.thumbPlaceholder]} />
+      )}
+      <View style={styles.info}>
+        <AppText variant="meta" style={styles.owner}>
+          {item.owner_name || 'A friend'}
+          {item.occasion ? ` \u00b7 ${item.occasion}` : ''}
+        </AppText>
+        <AppText variant="bodySemibold" numberOfLines={2}>
+          {item.name}
+        </AppText>
+        <View style={styles.metaRow}>
+          {item.recommendation ? (
+            <RecommendationBadge recommendation={item.recommendation} confidence={null} size="small" />
+          ) : null}
+          {item.current_price != null ? (
+            <AppText variant="monoPrice" style={styles.price}>
+              ${item.current_price.toFixed(2)}
+            </AppText>
+          ) : null}
+        </View>
+      </View>
+    </Pressable>
+  );
+});
+
+export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const queryClient = useQueryClient();
+  const [email, setEmail] = useState('');
+
+  const followingQuery = useQuery({ queryKey: FOLLOWING_KEY, queryFn: fetchFollowing });
+  const wishesQuery = useQuery({ queryKey: WISHES_KEY, queryFn: fetchFriendsWishes });
+
+  const invalidate = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: FOLLOWING_KEY });
+    queryClient.invalidateQueries({ queryKey: WISHES_KEY });
+  }, [queryClient]);
+
+  const followMutation = useMutation({
+    mutationFn: (e: string) => followUser(e),
+    onSuccess: () => {
+      setEmail('');
+      invalidate();
+    },
+    onError: (err: Error) => Alert.alert('Error', err.message || 'Could not follow'),
+  });
+
+  const unfollowMutation = useMutation({
+    mutationFn: (id: string) => unfollowUser(id),
+    onSuccess: invalidate,
+    onError: (err: Error) => Alert.alert('Error', err.message || 'Could not unfollow'),
+  });
+
+  const handleFollow = useCallback(() => {
+    const trimmed = email.trim();
+    if (!trimmed) return;
+    followMutation.mutate(trimmed);
+  }, [email, followMutation]);
+
+  const handleOpenProduct = useCallback(
+    (productId: string) => navigation.navigate('ProductDetail', { productId }),
+    [navigation],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: FriendWishItem }) => (
+      <WishRow item={item} colors={colors} onPress={handleOpenProduct} />
+    ),
+    [colors, handleOpenProduct],
+  );
+
+  const following = followingQuery.data?.following ?? [];
+  const wishes = wishesQuery.data?.items ?? [];
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={8}>
+          <AppText variant="body" style={{ color: colors.brandEnd }}>
+            Back
+          </AppText>
+        </Pressable>
+        <AppText variant="title" style={styles.headerTitle}>
+          Friends' Wishes
+        </AppText>
+        <View style={styles.backBtn} />
+      </View>
+
+      <View style={styles.followRow}>
+        <TextInput
+          value={email}
+          onChangeText={setEmail}
+          placeholder="Follow by email"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          style={styles.input}
+        />
+        <Button
+          title={followMutation.isPending ? '...' : 'Follow'}
+          onPress={handleFollow}
+          disabled={followMutation.isPending || email.trim().length === 0}
+          style={styles.followBtn}
+        />
+      </View>
+
+      {following.length > 0 && (
+        <View style={styles.chips}>
+          {following.map((u) => (
+            <Pressable
+              key={u.id}
+              style={styles.chip}
+              hitSlop={8}
+              onPress={() =>
+                Alert.alert('Unfollow', `Stop following ${u.full_name || u.email}?`, [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Unfollow', style: 'destructive', onPress: () => unfollowMutation.mutate(u.id) },
+                ])
+              }
+            >
+              <AppText variant="caption" style={styles.chipText}>
+                {u.full_name || u.email} {'\u00d7'}
+              </AppText>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {wishesQuery.isLoading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.brandEnd} />
+        </View>
+      ) : wishes.length === 0 ? (
+        <View style={styles.centered}>
+          <AppText variant="title">No friends' wishes yet</AppText>
+          <AppText variant="caption" style={styles.emptyBody}>
+            Follow someone by email to see the public items on their wishlist.
+          </AppText>
+        </View>
+      ) : (
+        <FlashList
+          data={wishes}
+          keyExtractor={(item) => `${item.owner_id}-${item.product_id}`}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </SafeAreaView>
+  );
+};
+
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.headerBg,
+    },
+    backBtn: {
+      width: 60,
+      minHeight: 44,
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      flex: 1,
+      textAlign: 'center',
+    },
+    followRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    input: {
+      flex: 1,
+      minHeight: 44,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.button,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.text,
+      backgroundColor: colors.surface,
+    },
+    followBtn: {
+      minWidth: 90,
+    },
+    chips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.sm,
+    },
+    chip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.cardBg,
+    },
+    chipText: {
+      color: colors.textSecondary,
+    },
+    centered: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.lg,
+      gap: spacing.sm,
+    },
+    emptyBody: {
+      textAlign: 'center',
+      maxWidth: 280,
+    },
+    listContent: {
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.xxl,
+    },
+  });
+
+const createItemStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      gap: spacing.md,
+      backgroundColor: colors.cardBg,
+      borderRadius: borderRadius.card,
+      padding: spacing.md,
+      marginTop: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    thumb: {
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.sm,
+    },
+    thumbPlaceholder: {
+      backgroundColor: colors.surface2,
+    },
+    info: {
+      flex: 1,
+      gap: spacing.xs,
+    },
+    owner: {
+      color: colors.brandEnd,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    price: {
+      color: colors.text,
+    },
+  });

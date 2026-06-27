@@ -243,9 +243,6 @@ const PageTwoVisual: React.FC<{ colors: ThemeColors; styles: ReturnType<typeof c
           <AppText variant="displayList" style={[styles.verdictWord, { color: waitColor }]}>
             WAIT
           </AppText>
-          <AppText variant="displayList" style={[styles.verdictWord, { color: holdColor }]}>
-            HOLD
-          </AppText>
         </View>
       </View>
     );

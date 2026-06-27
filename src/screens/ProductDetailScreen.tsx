@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerChangeEvent } from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import { RootStackParamList } from '../navigation/types';
 import { useProductDetail } from '../hooks/useProductDetail';
@@ -46,6 +46,8 @@ import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { useAuth } from '../context/AuthContext';
 import { buildRetailerPurchaseUrl } from '../utils/retailerPurchaseUrl';
 import { normalizeVerdict } from '../utils/verdictStyle';
+import { estimateTrueCost, DEFAULT_TAX_RATE } from '../utils/trueCost';
+import { bestMonthToBuy } from '../utils/bestTimeToBuy';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetail'>;
 type DetailSegment = 'Summary' | 'History' | 'Retailers';
@@ -88,6 +90,27 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     setShowStickyBar(e.nativeEvent.contentOffset.y > 120);
   }, []);
+
+  const handleDeadlineChange = useCallback(
+    (_event: DateTimePickerChangeEvent, selectedDate: Date) => {
+      setDeadline(selectedDate);
+      setShowDatePicker(false);
+    },
+    [setDeadline],
+  );
+
+  const handleDeadlineDismiss = useCallback(() => {
+    setShowDatePicker(false);
+  }, []);
+
+  const handleClearDeadline = useCallback(() => {
+    setDeadline(null);
+    setShowDatePicker(false);
+  }, [setDeadline]);
+
+  // Best-time-to-buy: lowest historical calendar month (seasonal dip), if any.
+  // Must stay above the early returns below so hook order is stable.
+  const bestMonth = useMemo(() => bestMonthToBuy(priceHistory), [priceHistory]);
 
   if (loading) {
     return (
@@ -160,22 +183,6 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     : sortedRows;
   const retailerForCTA = headlineOffer?.retailer ?? product.retailer ?? 'retailer';
 
-  const handleDeadlineChange = useCallback(
-    (_event: DateTimePickerEvent, selectedDate?: Date) => {
-      if (Platform.OS === 'android') setShowDatePicker(false);
-      if (selectedDate) {
-        setDeadline(selectedDate);
-        if (Platform.OS === 'ios') setShowDatePicker(false);
-      }
-    },
-    [setDeadline],
-  );
-
-  const handleClearDeadline = useCallback(() => {
-    setDeadline(null);
-    setShowDatePicker(false);
-  }, [setDeadline]);
-
   const formatDeadlineDisplay = (date: Date): string => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
@@ -222,6 +229,13 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     if (item.historyBasis === 'monthly_avg') return 'Monthly avg';
     if (item.historyBasis === 'latest_observation') return 'Latest observed';
     return 'No price data';
+  };
+
+  // Estimated all-in cost (price + ~tax + est. shipping). Uses the product's
+  // delivery hint to detect free shipping; clearly labeled as an estimate.
+  const formatTrueCost = (price: number) => {
+    const { total } = estimateTrueCost(price, { deliveryText: product.delivery });
+    return `Est. total $${total.toFixed(2)}`;
   };
 
   const effectiveMin90 =
@@ -352,7 +366,8 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
               minimumDate={new Date()}
-              onChange={handleDeadlineChange}
+              onValueChange={handleDeadlineChange}
+              onDismiss={handleDeadlineDismiss}
               themeVariant={colors.background === '#09090B' ? 'dark' : 'light'}
             />
           )}
@@ -476,6 +491,19 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               onRetailerChange={selectRetailer}
               forecast={prediction?.forecast}
             />
+            {bestMonth ? (
+              <View style={styles.bestMonth}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={16}
+                  color={colors.brandEnd}
+                />
+                <AppText variant="caption" style={styles.bestMonthText}>
+                  Historically cheapest in {bestMonth.monthName} — about{' '}
+                  {bestMonth.belowAvgPct.toFixed(0)}% below its yearly average.
+                </AppText>
+              </View>
+            ) : null}
           </View>
         )}
 
@@ -491,9 +519,14 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                   <AppText variant="bodySemibold">{bestOffer.retailer}</AppText>
                   <AppText variant="caption">{formatComparisonBasis(bestOffer)}</AppText>
                 </View>
-                <AppText variant="price" style={styles.offerPrice}>
-                  ${bestOffer.price!.toFixed(2)}
-                </AppText>
+                <View style={styles.offerPriceCol}>
+                  <AppText variant="price" style={styles.offerPrice}>
+                    ${bestOffer.price!.toFixed(2)}
+                  </AppText>
+                  <AppText variant="caption" style={styles.trueCost}>
+                    {formatTrueCost(bestOffer.price!)}
+                  </AppText>
+                </View>
               </View>
             )}
             {otherOffers.map((item) => (
@@ -502,14 +535,27 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                   <AppText variant="bodySemibold">{item.retailer}</AppText>
                   <AppText variant="caption">{formatComparisonBasis(item)}</AppText>
                 </View>
-                <AppText variant="price" style={styles.offerPriceSmall}>
-                  {item.price != null ? `$${item.price.toFixed(2)}` : '—'}
-                </AppText>
+                <View style={styles.offerPriceCol}>
+                  <AppText variant="price" style={styles.offerPriceSmall}>
+                    {item.price != null ? `$${item.price.toFixed(2)}` : '—'}
+                  </AppText>
+                  {item.price != null ? (
+                    <AppText variant="caption" style={styles.trueCost}>
+                      {formatTrueCost(item.price)}
+                    </AppText>
+                  ) : null}
+                </View>
               </View>
             ))}
             {sortedRows.length === 0 && (
               <AppText variant="caption">No retailer comparison data yet.</AppText>
             )}
+            {bestOffer ? (
+              <AppText variant="caption" style={styles.trueCostNote}>
+                Est. total includes ~{Math.round(DEFAULT_TAX_RATE * 100)}% sales tax and
+                estimated shipping. Actual tax/shipping vary by location and retailer.
+              </AppText>
+            ) : null}
           </View>
         )}
 
@@ -628,6 +674,33 @@ const createStyles = (colors: ThemeColors) =>
     },
     offerPriceSmall: {
       fontSize: 18,
+    },
+    offerPriceCol: {
+      alignItems: 'flex-end',
+      gap: 2,
+    },
+    bestMonth: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.md,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    bestMonthText: {
+      flex: 1,
+      color: colors.textSecondary,
+    },
+    trueCost: {
+      color: colors.textSecondary,
+    },
+    trueCostNote: {
+      marginTop: spacing.sm,
+      color: colors.textMuted,
     },
     segmentWrap: {
       marginTop: spacing.lg,

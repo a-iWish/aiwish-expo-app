@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as ExpoLinking from 'expo-linking';
 import { QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -19,6 +20,10 @@ import { ForgotPasswordScreen } from './src/screens/auth/ForgotPasswordScreen';
 import { EditProfileScreen } from './src/screens/EditProfileScreen';
 import { ChangePasswordScreen } from './src/screens/ChangePasswordScreen';
 import { SharedWishlistScreen } from './src/screens/SharedWishlistScreen';
+import { FriendsScreen } from './src/screens/FriendsScreen';
+import { ProductComparisonScreen } from './src/screens/ProductComparisonScreen';
+import { SharedListsScreen } from './src/screens/SharedListsScreen';
+import { SharedListDetailScreen } from './src/screens/SharedListDetailScreen';
 import { MainTabs } from './src/navigation/MainTabs';
 import { RootStackParamList } from './src/navigation/types';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -29,6 +34,25 @@ import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 const ONBOARDING_KEY = 'AIWISH_ONBOARDING_DONE';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Deep linking: backend share URLs look like https://aiwish.app/wishlist/<token>.
+// The aiwish:// scheme + Expo dev URL prefix let those links open the right screen.
+const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: [ExpoLinking.createURL('/'), 'aiwish://', 'https://aiwish.app'],
+  config: {
+    screens: {
+      SharedWishlist: 'wishlist/:token',
+      ProductDetail: 'product/:productId',
+      Main: {
+        screens: {
+          Discover: 'discover',
+          Watchlist: 'watchlist',
+          Settings: 'settings',
+        },
+      },
+    },
+  },
+};
 
 function AppNavigator() {
   const { colors, isDark } = useTheme();
@@ -114,6 +138,10 @@ function AppNavigator() {
         />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+        <Stack.Screen name="Friends" component={FriendsScreen} />
+        <Stack.Screen name="Compare" component={ProductComparisonScreen} />
+        <Stack.Screen name="SharedLists" component={SharedListsScreen} />
+        <Stack.Screen name="SharedListDetail" component={SharedListDetailScreen} />
       </Stack.Navigator>
     </>
   );
@@ -139,7 +167,14 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AuthProvider>
-            <NavigationContainer>
+            <NavigationContainer
+              linking={linking}
+              fallback={
+                <View style={styles.boot}>
+                  <ActivityIndicator size="large" />
+                </View>
+              }
+            >
               <AppNavigator />
             </NavigationContainer>
           </AuthProvider>
