@@ -169,4 +169,12 @@ export interface PredictionResponse {
   estimated_best_price?: number | null;
   estimated_wait_days?: number | null;
   reasons: string[];
+  /** Echoed deadline date (ISO string) when ?deadline= was passed. */
+  deadline?: string | null;
+  /** Days remaining until the deadline. */
+  days_until_deadline?: number | null;
+  /** Urgency classification based on how close the deadline is. */
+  deadline_urgency?: 'ok' | 'tight' | 'passed' | null;
+  /** Whether the prediction was adjusted to account for the deadline. */
+  deadline_adjusted?: boolean | null;
 }

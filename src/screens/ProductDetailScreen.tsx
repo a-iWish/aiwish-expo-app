@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Pressable,
   Linking,
+  Platform,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
@@ -14,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import { RootStackParamList } from '../navigation/types';
 import { useProductDetail } from '../hooks/useProductDetail';
@@ -32,7 +34,10 @@ import {
   spacing,
   borderRadius,
   appIconSizes,
+  fontSize,
   MIN_TOUCH,
+  SEMIBOLD_FONT,
+  BODY_FONT,
 } from '../styles/theme';
 import { lowestCurrentOffer } from '../utils/lowestCurrentOffer';
 import { mergePredictionSummary } from '../utils/predictionMerge';
@@ -52,6 +57,8 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [segment, setSegment] = useState<DetailSegment>('Summary');
   const [showStickyBar, setShowStickyBar] = useState(false);
 
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const { productId } = route.params;
   const {
     product,
@@ -64,6 +71,8 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     prediction,
     loading,
     error,
+    deadline,
+    setDeadline,
   } = useProductDetail(productId);
 
   const { isWatched, toggle: toggleWatchlist } = useWatchlist();
@@ -144,6 +153,30 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     ? sortedRows.filter((row) => row !== bestOffer)
     : sortedRows;
   const retailerForCTA = headlineOffer?.retailer ?? product.retailer ?? 'retailer';
+
+  const handleDeadlineChange = useCallback(
+    (_event: DateTimePickerEvent, selectedDate?: Date) => {
+      if (Platform.OS === 'android') setShowDatePicker(false);
+      if (selectedDate) {
+        setDeadline(selectedDate);
+        if (Platform.OS === 'ios') setShowDatePicker(false);
+      }
+    },
+    [setDeadline],
+  );
+
+  const handleClearDeadline = useCallback(() => {
+    setDeadline(null);
+    setShowDatePicker(false);
+  }, [setDeadline]);
+
+  const formatDeadlineDisplay = (date: Date): string => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+  };
+
+  const deadlineUrgency = prediction?.deadline_urgency ?? null;
+  const deadlineAdjusted = prediction?.deadline_adjusted ?? false;
 
   const handlePurchase = () => {
     const url = buildRetailerPurchaseUrl(product.name, retailerForCTA);
@@ -266,6 +299,101 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
           />
         </Animated.View>
 
+        {/* Deadline picker */}
+        <View style={styles.deadlineWrap}>
+          <View style={styles.deadlineRow}>
+            <AppText variant="caption" style={styles.deadlineLabel}>
+              Need it by
+            </AppText>
+            {deadline ? (
+              <View style={styles.deadlineValueRow}>
+                <Pressable
+                  onPress={() => setShowDatePicker(true)}
+                  style={styles.deadlineBtn}
+                  hitSlop={8}
+                >
+                  <Ionicons name="calendar-outline" size={16} color={colors.brandEnd} />
+                  <AppText variant="bodySemibold" style={styles.deadlineDateText}>
+                    {formatDeadlineDisplay(deadline)}
+                  </AppText>
+                </Pressable>
+                <Pressable
+                  onPress={handleClearDeadline}
+                  style={styles.deadlineClearBtn}
+                  hitSlop={8}
+                  accessibilityLabel="Clear deadline"
+                >
+                  <Ionicons name="close-circle" size={20} color={colors.textSoft} />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => setShowDatePicker(true)}
+                style={styles.deadlineBtn}
+                hitSlop={8}
+              >
+                <Ionicons name="calendar-outline" size={16} color={colors.brandEnd} />
+                <AppText variant="caption" style={{ color: colors.brandEnd }}>
+                  Set deadline
+                </AppText>
+              </Pressable>
+            )}
+          </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={deadline ?? new Date(Date.now() + 14 * 86400000)}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              minimumDate={new Date()}
+              onChange={handleDeadlineChange}
+              themeVariant={colors.background === '#09090B' ? 'dark' : 'light'}
+            />
+          )}
+
+          {deadlineUrgency != null && (
+            <View
+              style={[
+                styles.urgencyBadge,
+                deadlineUrgency === 'ok' && {
+                  backgroundColor: colors.successBg,
+                  borderColor: colors.successBorder,
+                },
+                deadlineUrgency === 'tight' && {
+                  backgroundColor: colors.warningBg,
+                  borderColor: colors.warningBorder,
+                },
+                deadlineUrgency === 'passed' && {
+                  backgroundColor: `${colors.error}18`,
+                  borderColor: `${colors.error}33`,
+                },
+              ]}
+            >
+              <AppText
+                variant="caption"
+                style={[
+                  styles.urgencyText,
+                  deadlineUrgency === 'ok' && { color: colors.success },
+                  deadlineUrgency === 'tight' && { color: colors.warning },
+                  deadlineUrgency === 'passed' && { color: colors.error },
+                ]}
+              >
+                {deadlineUrgency === 'ok'
+                  ? 'On track'
+                  : deadlineUrgency === 'tight'
+                    ? 'Deadline approaching'
+                    : 'Deadline passed'}
+              </AppText>
+            </View>
+          )}
+
+          {deadlineAdjusted && (
+            <AppText variant="meta" style={styles.deadlineAdjustedNote}>
+              Adjusted for your deadline
+            </AppText>
+          )}
+        </View>
+
         <Animated.View entering={FadeInUp.delay(80).duration(500)} style={styles.heroWrap}>
           <ProductHeroCard
             product={product}
@@ -340,6 +468,7 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               retailers={retailers}
               selectedRetailer={selectedRetailer}
               onRetailerChange={selectRetailer}
+              forecast={prediction?.forecast}
             />
           </View>
         )}
@@ -429,6 +558,54 @@ const createStyles = (colors: ThemeColors) =>
     scrollContent: {
       paddingHorizontal: spacing.md,
       paddingTop: spacing.sm,
+    },
+    deadlineWrap: {
+      marginTop: spacing.md,
+      gap: spacing.sm,
+    },
+    deadlineRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    deadlineLabel: {
+      color: colors.textMuted,
+    },
+    deadlineValueRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    deadlineBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      minHeight: MIN_TOUCH,
+      paddingHorizontal: spacing.sm,
+    },
+    deadlineDateText: {
+      color: colors.brandEnd,
+    },
+    deadlineClearBtn: {
+      minWidth: MIN_TOUCH,
+      minHeight: MIN_TOUCH,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    urgencyBadge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: spacing.sm + 4,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.sm,
+      borderWidth: 1,
+    },
+    urgencyText: {
+      fontFamily: SEMIBOLD_FONT,
+      fontSize: fontSize.xs,
+    },
+    deadlineAdjustedNote: {
+      color: colors.textMuted,
+      fontFamily: BODY_FONT,
     },
     heroWrap: {
       marginTop: spacing.lg,
