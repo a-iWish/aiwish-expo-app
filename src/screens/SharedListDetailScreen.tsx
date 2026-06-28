@@ -22,7 +22,7 @@ import {
   leaveSharedList,
 } from '../services/api';
 import { useProducts } from '../hooks/useProducts';
-import { useWatchlist } from '../hooks/useWatchlist';
+import { useWishlist } from '../hooks/useWishlist';
 import { useAuth } from '../context/AuthContext';
 import { AppText, Button } from '../components';
 import { RecommendationBadge } from '../components/RecommendationBadge';
@@ -39,7 +39,7 @@ export const SharedListDetailScreen: React.FC<Props> = ({ navigation, route }) =
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { products } = useProducts();
-  const { ids: watchlistIds } = useWatchlist();
+  const { ids: wishlistIds } = useWishlist();
 
   const detailKey = useMemo(() => ['lists', 'detail', listId] as const, [listId]);
   const detailQuery = useQuery({
@@ -107,15 +107,15 @@ export const SharedListDetailScreen: React.FC<Props> = ({ navigation, route }) =
     );
   }, [isOwner, leaveMutation]);
 
-  // Watchlist products not already on the shared list — candidates to add.
+  // Wishlist products not already on the shared list — candidates to add.
   const existingProductIds = useMemo(
     () => new Set((detail?.items ?? []).map((it) => it.product_id)),
     [detail],
   );
   const addable = useMemo(() => {
-    const watched = new Set(watchlistIds);
+    const watched = new Set(wishlistIds);
     return products.filter((p) => watched.has(p.id) && !existingProductIds.has(p.id));
-  }, [products, watchlistIds, existingProductIds]);
+  }, [products, wishlistIds, existingProductIds]);
 
   if (detailQuery.isLoading) {
     return (
@@ -182,7 +182,7 @@ export const SharedListDetailScreen: React.FC<Props> = ({ navigation, route }) =
         {addable.length > 0 && (
           <>
             <AppText variant="meta" style={styles.sectionLabel}>
-              Add from your watchlist
+              Add from your wishlist
             </AppText>
             <ScrollView
               horizontal
@@ -217,7 +217,7 @@ export const SharedListDetailScreen: React.FC<Props> = ({ navigation, route }) =
         </AppText>
         {detail.items.length === 0 ? (
           <AppText variant="caption" style={styles.emptyBody}>
-            No items yet. Add products from your watchlist above, or ask a member
+            No items yet. Add products from your wishlist above, or ask a member
             to add some.
           </AppText>
         ) : (

@@ -2,7 +2,8 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from './types';
 import { ProductListScreen } from '../screens/ProductListScreen';
-import { WatchlistScreen } from '../screens/WatchlistScreen';
+import { WishlistScreen } from '../screens/WishlistScreen';
+import { FriendsScreen } from '../screens/FriendsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { TabBar } from '../components/TabBar';
 
@@ -15,7 +16,8 @@ export const MainTabs: React.FC = () => {
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Discover" component={ProductListScreen} />
-      <Tab.Screen name="Watchlist" component={WatchlistScreen} />
+      <Tab.Screen name="Wishlist" component={WishlistScreen} />
+      <Tab.Screen name="Friends" component={FriendsScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );

@@ -9,17 +9,19 @@ import {
   fetchWishlist,
   addToWishlist,
   removeFromWishlist,
+  updateWishlistItem,
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export const WISHLIST_QUERY_KEY = ['wishlist'] as const;
 
-export interface WatchlistMeta {
+export interface WishlistMeta {
   savedAt: string;
   savedPrice: number | null;
+  deadline: string | null;
 }
 
-export type WatchlistMetaMap = Record<string, WatchlistMeta>;
+export type WishlistMetaMap = Record<string, WishlistMeta>;
 
 /**
  * Per-user wishlist, persisted server-side. Reads come from a React Query
@@ -29,7 +31,7 @@ export type WatchlistMetaMap = Record<string, WatchlistMeta>;
  * Saving requires auth — callers should gate the action via `isAuthenticated`
  * (see ProductDetailScreen) and prompt login before calling add/toggle.
  */
-export function useWatchlist() {
+export function useWishlist() {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
 
@@ -42,10 +44,11 @@ export function useWatchlist() {
   // Logged-out users always see an empty wishlist, even if a stale cache exists.
   const items = isAuthenticated ? data?.items ?? [] : [];
   const ids = items.map((it) => it.product_id);
-  const meta: WatchlistMetaMap = items.reduce<WatchlistMetaMap>((acc, it) => {
+  const meta: WishlistMetaMap = items.reduce<WishlistMetaMap>((acc, it) => {
     acc[it.product_id] = {
       savedAt: it.created_at,
       savedPrice: it.saved_price ?? null,
+      deadline: it.deadline ?? null,
     };
     return acc;
   }, {});
@@ -76,14 +79,22 @@ export function useWatchlist() {
   }, [queryClient]);
 
   const addMutation = useMutation({
-    mutationFn: ({ id, savedPrice }: { id: string; savedPrice?: number | null }) =>
-      addToWishlist(id, savedPrice),
-    onMutate: ({ id, savedPrice }) =>
+    mutationFn: ({
+      id,
+      savedPrice,
+      deadline,
+    }: {
+      id: string;
+      savedPrice?: number | null;
+      deadline?: string | null;
+    }) => addToWishlist(id, savedPrice, deadline),
+    onMutate: ({ id, savedPrice, deadline }) =>
       optimistic((prev) => {
         if (prev.items.some((it) => it.product_id === id)) return prev;
         const item = {
           product_id: id,
           saved_price: savedPrice ?? null,
+          deadline: deadline ?? null,
           created_at: new Date().toISOString(),
         };
         return { items: [item, ...prev.items], count: prev.count + 1 };
@@ -104,8 +115,8 @@ export function useWatchlist() {
   });
 
   const add = useCallback(
-    (id: string, savedPrice?: number | null) =>
-      addMutation.mutate({ id, savedPrice }),
+    (id: string, savedPrice?: number | null, deadline?: string | null) =>
+      addMutation.mutate({ id, savedPrice, deadline }),
     [addMutation],
   );
 
@@ -119,14 +130,21 @@ export function useWatchlist() {
   const getMeta = useCallback((id: string) => meta[id], [meta]);
 
   const toggle = useCallback(
-    (id: string, savedPrice?: number | null) => {
+    (id: string, savedPrice?: number | null, deadline?: string | null) => {
       if (ids.includes(id)) {
         remove(id);
       } else {
-        add(id, savedPrice);
+        add(id, savedPrice, deadline);
       }
     },
     [ids, add, remove],
+  );
+
+  // Persist a deadline change for an already-saved item (ISO yyyy-mm-dd, or null to clear).
+  const updateDeadline = useCallback(
+    (id: string, deadline: string | null) =>
+      updateWishlistItem(id, { deadline }).then(settle, settle),
+    [settle],
   );
 
   return {
@@ -138,5 +156,6 @@ export function useWatchlist() {
     toggle,
     isWatched,
     getMeta,
+    updateDeadline,
   };
 }

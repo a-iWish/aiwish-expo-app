@@ -5,7 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Product } from '../types/product';
 import { useProducts } from '../hooks/useProducts';
-import { useWatchlist } from '../hooks/useWatchlist';
+import { useWishlist } from '../hooks/useWishlist';
 import { AppText } from '../components';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeColors, spacing, borderRadius } from '../styles/theme';
@@ -107,18 +107,18 @@ const METRICS: MetricRow[] = [
 export const ProductComparisonScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { ids } = useWatchlist();
+  const { ids } = useWishlist();
   const { products } = useProducts();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const watchlistProducts = useMemo(
+  const wishlistProducts = useMemo(
     () => products.filter((p) => ids.includes(p.id)),
     [products, ids],
   );
 
   const selected = useMemo(
-    () => selectedIds.map((id) => watchlistProducts.find((p) => p.id === id)).filter(Boolean) as Product[],
-    [selectedIds, watchlistProducts],
+    () => selectedIds.map((id) => wishlistProducts.find((p) => p.id === id)).filter(Boolean) as Product[],
+    [selectedIds, wishlistProducts],
   );
 
   const toggle = useCallback((id: string) => {
@@ -149,7 +149,7 @@ export const ProductComparisonScreen: React.FC<Props> = ({ navigation }) => {
 
       <View style={styles.pickerRow}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pickerContent}>
-          {watchlistProducts.map((p) => {
+          {wishlistProducts.map((p) => {
             const isSelected = selectedIds.includes(p.id);
             return (
               <Pressable
@@ -176,8 +176,8 @@ export const ProductComparisonScreen: React.FC<Props> = ({ navigation }) => {
       {selected.length === 0 ? (
         <View style={styles.centered}>
           <AppText variant="caption" style={styles.emptyBody}>
-            {watchlistProducts.length === 0
-              ? 'Save products to your watchlist first, then compare them here.'
+            {wishlistProducts.length === 0
+              ? 'Save products to your wishlist first, then compare them here.'
               : 'Tap products above to start comparing.'}
           </AppText>
         </View>

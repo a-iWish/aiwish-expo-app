@@ -19,7 +19,8 @@ const TAB_CONFIG: Record<
   { label: string; icon: IonIcon; activeIcon: IonIcon }
 > = {
   Discover: { label: 'Discover', icon: 'compass-outline', activeIcon: 'compass' },
-  Watchlist: { label: 'Watchlist', icon: 'heart-outline', activeIcon: 'heart' },
+  Wishlist: { label: 'Wishlist', icon: 'heart-outline', activeIcon: 'heart' },
+  Friends: { label: 'Friends', icon: 'people-outline', activeIcon: 'people' },
   Settings: { label: 'Settings', icon: 'settings-outline', activeIcon: 'settings' },
 };
 

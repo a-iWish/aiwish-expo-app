@@ -16,7 +16,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { useProducts } from '../hooks/useProducts';
-import { useWatchlist } from '../hooks/useWatchlist';
+import { useWishlist } from '../hooks/useWishlist';
 import { Product, WishlistItem } from '../types/product';
 import { shareWishlist, updateWishlistItem } from '../services/api';
 import { EditorialProductRow, AppText, Button } from '../components';
@@ -29,11 +29,11 @@ import { ThemeColors, spacing, borderRadius } from '../styles/theme';
 import {
   useQueryClient,
 } from '@tanstack/react-query';
-import { WISHLIST_QUERY_KEY } from '../hooks/useWatchlist';
+import { WISHLIST_QUERY_KEY } from '../hooks/useWishlist';
 
 type Props = {
   navigation: CompositeNavigationProp<
-    BottomTabNavigationProp<MainTabParamList, 'Watchlist'>,
+    BottomTabNavigationProp<MainTabParamList, 'Wishlist'>,
     NativeStackNavigationProp<RootStackParamList>
   >;
 };
@@ -61,11 +61,28 @@ function formatSavedDelta(
   return `${sign}${pct.toFixed(0)}% since saved`;
 }
 
-export const WatchlistScreen: React.FC<Props> = ({ navigation }) => {
+/** Human, urgency-aware label for a saved deadline (ISO yyyy-mm-dd). */
+function formatDeadline(deadline: string | null | undefined): string | undefined {
+  if (!deadline) return undefined;
+  const [y, m, d] = deadline.split('-').map(Number);
+  if (!y || !m || !d) return undefined;
+  const target = new Date(y, m - 1, d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((target.getTime() - today.getTime()) / 86400000);
+  const label = target.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  if (days < 0) return `${label} · overdue`;
+  if (days === 0) return `${label} · today`;
+  if (days === 1) return `${label} · 1 day left`;
+  if (days <= 14) return `${label} · ${days} days left`;
+  return `by ${label}`;
+}
+
+export const WishlistScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
   const { isAuthenticated } = useAuth();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { ids, getMeta, items } = useWatchlist();
+  const { ids, getMeta, items } = useWishlist();
   const { products, loading, error, refetch } = useProducts();
   const [refreshing, setRefreshing] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -73,14 +90,14 @@ export const WatchlistScreen: React.FC<Props> = ({ navigation }) => {
   const [occasionTarget, setOccasionTarget] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const watchlistProducts = useMemo(
+  const wishlistProducts = useMemo(
     () => products.filter((p) => ids.includes(p.id)),
     [products, ids],
   );
 
   /**
    * Savings dashboard: aggregate potential and realized savings across the
-   * watchlist from data already loaded (no extra fetches).
+   * wishlist from data already loaded (no extra fetches).
    *   - potentialSavings: sum of (original - current) for discounted items.
    *   - droppedSinceSaved: sum of (savedPrice - current) where price fell after saving.
    *   - readyToBuy: count of items the model currently rates BUY.
@@ -90,7 +107,7 @@ export const WatchlistScreen: React.FC<Props> = ({ navigation }) => {
     let droppedSinceSaved = 0;
     let droppedCount = 0;
     let readyToBuy = 0;
-    for (const p of watchlistProducts) {
+    for (const p of wishlistProducts) {
       const current = p.trusted_price ?? p.current_price ?? null;
       if (current != null && p.original_price != null && p.original_price > current) {
         potentialSavings += p.original_price - current;
@@ -107,9 +124,9 @@ export const WatchlistScreen: React.FC<Props> = ({ navigation }) => {
       droppedSinceSaved,
       droppedCount,
       readyToBuy,
-      count: watchlistProducts.length,
+      count: wishlistProducts.length,
     };
-  }, [watchlistProducts, getMeta]);
+  }, [wishlistProducts, getMeta]);
 
   // Build a map from product id to the wishlist item (for is_public / occasion)
   const itemMap = useMemo(() => {
@@ -194,6 +211,9 @@ export const WatchlistScreen: React.FC<Props> = ({ navigation }) => {
       const meta = getMeta(item.id);
       const current = item.trusted_price ?? item.current_price;
       const deltaLine = formatSavedDelta(meta?.savedPrice, current);
+      const deadlineLine = formatDeadline(meta?.deadline);
+      const metaSuffix =
+        [deltaLine, deadlineLine].filter(Boolean).join('  ·  ') || undefined;
       const wishItem = itemMap[item.id];
       const isPublic = wishItem?.is_public ?? false;
 
@@ -202,7 +222,7 @@ export const WatchlistScreen: React.FC<Props> = ({ navigation }) => {
           <MemoRow
             product={item}
             onPress={handleProductPress}
-            metaSuffix={deltaLine}
+            metaSuffix={metaSuffix}
           />
           <View style={styles.itemActions}>
             <Pressable
@@ -249,12 +269,12 @@ export const WatchlistScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScreenHeader
-        title="Watchlist"
+        title="Wishlist"
         subtitle="products you are tracking"
         showBrand
       />
 
-      {watchlistProducts.length > 0 && (
+      {wishlistProducts.length > 0 && (
         <View style={styles.dashboard}>
           <View style={styles.dashStat}>
             <AppText variant="price" style={styles.dashValue}>
@@ -285,14 +305,14 @@ export const WatchlistScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       )}
 
-      {watchlistProducts.length > 0 && savings.droppedCount > 0 && (
+      {wishlistProducts.length > 0 && savings.droppedCount > 0 && (
         <AppText variant="caption" style={styles.droppedNote}>
           ${savings.droppedSinceSaved.toFixed(0)} dropped across {savings.droppedCount}{' '}
           item{savings.droppedCount === 1 ? '' : 's'} since you saved them.
         </AppText>
       )}
 
-      {watchlistProducts.length > 0 && (
+      {wishlistProducts.length > 0 && (
         <View style={styles.shareRow}>
           {isAuthenticated && (
             <Button
@@ -303,7 +323,7 @@ export const WatchlistScreen: React.FC<Props> = ({ navigation }) => {
               style={styles.shareBtn}
             />
           )}
-          {watchlistProducts.length > 1 && (
+          {wishlistProducts.length > 1 && (
             <Button
               title="Compare"
               variant="outline"
@@ -331,26 +351,29 @@ export const WatchlistScreen: React.FC<Props> = ({ navigation }) => {
             </AppText>
           </Pressable>
         </View>
-      ) : watchlistProducts.length === 0 ? (
+      ) : wishlistProducts.length === 0 ? (
         <View style={styles.empty}>
-          <AppText variant="displayList" style={styles.emptyVerdict}>
-            WAIT
-          </AppText>
           <AppText variant="title" style={styles.emptyTitle}>
-            Nothing saved yet
+            {isAuthenticated ? 'Nothing saved yet' : 'Sign in to save'}
           </AppText>
           <AppText variant="caption" style={styles.emptyBody}>
-            Save products from Discover to track prices and verdicts here.
+            {isAuthenticated
+              ? 'Save products from Discover to track prices and verdicts here.'
+              : 'Sign in to save products and sync your wishlist across your devices.'}
           </AppText>
           <Button
-            title="Browse Discover"
-            onPress={() => navigation.navigate('Discover')}
+            title={isAuthenticated ? 'Browse Discover' : 'Sign in'}
+            onPress={() =>
+              isAuthenticated
+                ? navigation.navigate('Discover')
+                : navigation.navigate('Login')
+            }
             style={styles.emptyBtn}
           />
         </View>
       ) : (
         <FlashList
-          data={watchlistProducts}
+          data={wishlistProducts}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}

@@ -80,7 +80,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             Welcome back
           </AppText>
           <AppText variant="caption" style={styles.subtitle}>
-            Sign in to sync your watchlist and price alerts.
+            Sign in to sync your wishlist and price alerts.
           </AppText>
 
           <View style={styles.form}>

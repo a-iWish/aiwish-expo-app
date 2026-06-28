@@ -10,7 +10,6 @@ export type RootStackParamList = {
   ForgotPassword: undefined;
   EditProfile: undefined;
   ChangePassword: undefined;
-  Friends: undefined;
   Compare: undefined;
   SharedLists: undefined;
   SharedListDetail: { listId: string };
@@ -18,6 +17,7 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
   Discover: undefined;
-  Watchlist: undefined;
+  Wishlist: undefined;
+  Friends: undefined;
   Settings: undefined;
 };

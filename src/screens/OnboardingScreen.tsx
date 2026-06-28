@@ -57,7 +57,7 @@ const PAGES: PageData[] = [
     key: 'save',
     headline: 'Save and get notified',
     subtext:
-      'Add products to your watchlist and set deadlines. We’ll tell you when the price is right.',
+      'Add products to your wishlist and set deadlines. We’ll tell you when the price is right.',
   },
 ];
 
@@ -248,7 +248,7 @@ const PageTwoVisual: React.FC<{ colors: ThemeColors; styles: ReturnType<typeof c
     );
   };
 
-/** Page 3: Watchlist icon (heart outline in brand gradient tones). */
+/** Page 3: Wishlist icon (heart outline in brand gradient tones). */
 const PageThreeVisual: React.FC<{ colors: ThemeColors; styles: ReturnType<typeof createStyles> }> =
   ({ colors, styles }) => (
     <View style={styles.visualInner}>
