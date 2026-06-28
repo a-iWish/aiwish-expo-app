@@ -10,9 +10,11 @@ import {
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { CompositeNavigationProp } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { RootStackParamList } from '../navigation/types';
+import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { FriendWishItem } from '../types/product';
 import {
   followUser,
@@ -21,11 +23,18 @@ import {
   fetchFriendsWishes,
 } from '../services/api';
 import { AppText, Button } from '../components';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { RecommendationBadge } from '../components/RecommendationBadge';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { ThemeColors, spacing, borderRadius } from '../styles/theme';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Friends'>;
+type Props = {
+  navigation: CompositeNavigationProp<
+    BottomTabNavigationProp<MainTabParamList, 'Friends'>,
+    NativeStackNavigationProp<RootStackParamList>
+  >;
+};
 
 const FOLLOWING_KEY = ['social', 'following'] as const;
 const WISHES_KEY = ['social', 'friends-wishes'] as const;
@@ -74,10 +83,19 @@ export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
   const [email, setEmail] = useState('');
 
-  const followingQuery = useQuery({ queryKey: FOLLOWING_KEY, queryFn: fetchFollowing });
-  const wishesQuery = useQuery({ queryKey: WISHES_KEY, queryFn: fetchFriendsWishes });
+  const followingQuery = useQuery({
+    queryKey: FOLLOWING_KEY,
+    queryFn: fetchFollowing,
+    enabled: isAuthenticated,
+  });
+  const wishesQuery = useQuery({
+    queryKey: WISHES_KEY,
+    queryFn: fetchFriendsWishes,
+    enabled: isAuthenticated,
+  });
 
   const invalidate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: FOLLOWING_KEY });
@@ -120,19 +138,30 @@ export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
   const following = followingQuery.data?.following ?? [];
   const wishes = wishesQuery.data?.items ?? [];
 
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <ScreenHeader title="Friends" subtitle="see what friends are saving" showBrand />
+        <View style={styles.empty}>
+          <AppText variant="title" style={styles.emptyTitle}>
+            Sign in to connect
+          </AppText>
+          <AppText variant="caption" style={styles.emptyBody}>
+            Sign in to follow friends and see what they're wishing for.
+          </AppText>
+          <Button
+            title="Sign in"
+            onPress={() => navigation.navigate('Login')}
+            style={styles.emptyBtn}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={8}>
-          <AppText variant="body" style={{ color: colors.brandEnd }}>
-            Back
-          </AppText>
-        </Pressable>
-        <AppText variant="title" style={styles.headerTitle}>
-          Friends' Wishes
-        </AppText>
-        <View style={styles.backBtn} />
-      </View>
+      <ScreenHeader title="Friends" subtitle="see what friends are saving" showBrand />
 
       <View style={styles.followRow}>
         <TextInput
@@ -179,8 +208,10 @@ export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
           <ActivityIndicator size="large" color={colors.brandEnd} />
         </View>
       ) : wishes.length === 0 ? (
-        <View style={styles.centered}>
-          <AppText variant="title">No friends' wishes yet</AppText>
+        <View style={styles.empty}>
+          <AppText variant="title" style={styles.emptyTitle}>
+            No friends' wishes yet
+          </AppText>
           <AppText variant="caption" style={styles.emptyBody}>
             Follow someone by email to see the public items on their wishlist.
           </AppText>
@@ -266,9 +297,22 @@ const createStyles = (colors: ThemeColors) =>
       padding: spacing.lg,
       gap: spacing.sm,
     },
+    empty: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xxl,
+      alignItems: 'flex-start',
+    },
+    emptyTitle: {
+      marginTop: spacing.md,
+    },
     emptyBody: {
-      textAlign: 'center',
+      marginTop: spacing.sm,
       maxWidth: 280,
+    },
+    emptyBtn: {
+      marginTop: spacing.lg,
+      alignSelf: 'stretch',
     },
     listContent: {
       paddingHorizontal: spacing.md,

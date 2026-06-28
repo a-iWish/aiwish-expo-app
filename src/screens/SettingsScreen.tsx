@@ -48,7 +48,7 @@ export const SettingsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader title="Settings" />
+      <ScreenHeader title="Settings" showBrand />
 
       <ScrollView
         style={styles.scroll}
@@ -107,19 +107,6 @@ export const SettingsScreen: React.FC = () => {
             <View style={styles.divider} />
             <Pressable
               style={styles.row}
-              onPress={() => navigation.navigate('Friends')}
-              accessibilityRole="button"
-            >
-              <AppText variant="body">Friends' Wishes</AppText>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={colors.textSecondary}
-              />
-            </Pressable>
-            <View style={styles.divider} />
-            <Pressable
-              style={styles.row}
               onPress={() => navigation.navigate('SharedLists')}
               accessibilityRole="button"
             >
@@ -151,7 +138,7 @@ export const SettingsScreen: React.FC = () => {
             <View style={styles.signInTextWrap}>
               <AppText variant="bodySemibold">Sign in or create account</AppText>
               <AppText variant="caption" style={styles.signInHint}>
-                Sync your watchlist and price alerts across devices.
+                Sync your wishlist and price alerts across devices.
               </AppText>
             </View>
             <Ionicons

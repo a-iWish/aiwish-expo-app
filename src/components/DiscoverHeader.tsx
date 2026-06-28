@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
-import { BrandWordmark } from './BrandWordmark';
-import { AccountButton } from './AccountButton';
+import { BrandBar } from './BrandBar';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { firstName } from '../utils/userName';
@@ -17,28 +16,13 @@ export const DiscoverHeader: React.FC<DiscoverHeaderProps> = ({
   productCount,
   filteredCount,
 }) => {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { isAuthenticated, user } = useAuth();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.brandRow}>
-        <View style={styles.brandLeft}>
-          <Image
-            source={
-              isDark
-                ? require('../../assets/aiwish-logo-transparent-dark.png')
-                : require('../../assets/aiwish-logo-transparent-light.png')
-            }
-            style={styles.logo}
-            resizeMode="contain"
-            accessibilityIgnoresInvertColors
-          />
-          <BrandWordmark textStyle={styles.wordmark} iwishColor={colors.brandEnd} />
-        </View>
-        <AccountButton />
-      </View>
+      <BrandBar />
 
       <AppText variant="meta" style={styles.eyebrow}>
         {isAuthenticated
@@ -62,12 +46,13 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing.md,
       paddingTop: spacing.sm,
       paddingBottom: spacing.md,
+      backgroundColor: colors.headerBg,
     },
     brandRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: spacing.lg,
+      marginBottom: spacing.sm,
     },
     brandLeft: {
       flexDirection: 'row',
@@ -75,11 +60,11 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.sm,
     },
     logo: {
-      width: 32,
-      height: 32,
+      width: 36,
+      height: 36,
     },
     wordmark: {
-      fontSize: 20,
+      fontSize: 22,
       letterSpacing: -0.6,
     },
     eyebrow: {

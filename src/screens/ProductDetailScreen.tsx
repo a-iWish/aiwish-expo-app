@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Image,
@@ -41,7 +41,7 @@ import {
 } from '../styles/theme';
 import { lowestCurrentOffer } from '../utils/lowestCurrentOffer';
 import { mergePredictionSummary } from '../utils/predictionMerge';
-import { useWatchlist } from '../hooks/useWatchlist';
+import { useWishlist } from '../hooks/useWishlist';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { useAuth } from '../context/AuthContext';
 import { buildRetailerPurchaseUrl } from '../utils/retailerPurchaseUrl';
@@ -78,7 +78,7 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     setDeadline,
   } = useProductDetail(productId);
 
-  const { isWatched, toggle: toggleWatchlist } = useWatchlist();
+  const { isWatched, toggle: toggleWishlist, getMeta, updateDeadline } = useWishlist();
   const { addRecent } = useRecentlyViewed();
   const { isAuthenticated } = useAuth();
   const watched = isWatched(productId);
@@ -87,16 +87,30 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     addRecent(productId);
   }, [productId, addRecent]);
 
+  // Initialize the deadline picker from the saved wishlist item (once).
+  const savedDeadline = getMeta(productId)?.deadline ?? null;
+  const deadlineInitRef = useRef(false);
+  useEffect(() => {
+    if (deadlineInitRef.current || !savedDeadline) return;
+    deadlineInitRef.current = true;
+    setDeadline(new Date(savedDeadline));
+  }, [savedDeadline, setDeadline]);
+
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     setShowStickyBar(e.nativeEvent.contentOffset.y > 120);
   }, []);
 
   const handleDeadlineChange = useCallback(
-    (_event: DateTimePickerChangeEvent, selectedDate: Date) => {
-      setDeadline(selectedDate);
+    (_event: DateTimePickerChangeEvent, selectedDate?: Date) => {
       setShowDatePicker(false);
+      if (!selectedDate) return;
+      setDeadline(selectedDate);
+      // Persist immediately if this product is already saved.
+      if (isWatched(productId)) {
+        updateDeadline(productId, selectedDate.toISOString().split('T')[0]);
+      }
     },
-    [setDeadline],
+    [setDeadline, isWatched, productId, updateDeadline],
   );
 
   const handleDeadlineDismiss = useCallback(() => {
@@ -106,7 +120,10 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const handleClearDeadline = useCallback(() => {
     setDeadline(null);
     setShowDatePicker(false);
-  }, [setDeadline]);
+    if (isWatched(productId)) {
+      updateDeadline(productId, null);
+    }
+  }, [setDeadline, isWatched, productId, updateDeadline]);
 
   // Best-time-to-buy: lowest historical calendar month (seasonal dip), if any.
   // Must stay above the early returns below so hook order is stable.
@@ -196,19 +213,20 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     Linking.openURL(url);
   };
 
-  const handleWatchlist = () => {
+  const handleWishlist = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!isAuthenticated) {
       // Saving requires an account — send guests to sign in / register.
       navigation.navigate('Login');
       return;
     }
-    toggleWatchlist(productId, currentForHeadline);
+    const deadlineIso = deadline ? deadline.toISOString().split('T')[0] : null;
+    toggleWishlist(productId, currentForHeadline, deadlineIso);
   };
 
   const handlePrimaryCta = () => {
     if (isWait && !watched) {
-      handleWatchlist();
+      handleWishlist();
       return;
     }
     handlePurchase();
@@ -219,10 +237,10 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     : isWait
       ? watched
         ? `View at ${retailerForCTA}`
-        : 'Save to watchlist'
+        : 'Save to wishlist'
       : watched
         ? `View at ${retailerForCTA}`
-        : 'Save to watchlist';
+        : 'Save to wishlist';
 
   const formatComparisonBasis = (item: (typeof sortedRows)[number]) => {
     if (item.source === 'amazon') return 'Amazon price';
@@ -282,10 +300,10 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
           <Ionicons name="chevron-back" size={24} color={colors.brandEnd} />
         </Pressable>
         <Pressable
-          onPress={handleWatchlist}
+          onPress={handleWishlist}
           style={styles.navBtn}
           hitSlop={12}
-          accessibilityLabel={watched ? 'Remove from watchlist' : 'Add to watchlist'}
+          accessibilityLabel={watched ? 'Remove from wishlist' : 'Add to wishlist'}
         >
           <Ionicons
             name={watched ? 'heart' : 'heart-outline'}

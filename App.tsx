@@ -20,7 +20,6 @@ import { ForgotPasswordScreen } from './src/screens/auth/ForgotPasswordScreen';
 import { EditProfileScreen } from './src/screens/EditProfileScreen';
 import { ChangePasswordScreen } from './src/screens/ChangePasswordScreen';
 import { SharedWishlistScreen } from './src/screens/SharedWishlistScreen';
-import { FriendsScreen } from './src/screens/FriendsScreen';
 import { ProductComparisonScreen } from './src/screens/ProductComparisonScreen';
 import { SharedListsScreen } from './src/screens/SharedListsScreen';
 import { SharedListDetailScreen } from './src/screens/SharedListDetailScreen';
@@ -46,7 +45,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       Main: {
         screens: {
           Discover: 'discover',
-          Watchlist: 'watchlist',
+          Wishlist: 'wishlist',
           Settings: 'settings',
         },
       },
@@ -138,7 +137,6 @@ function AppNavigator() {
         />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
-        <Stack.Screen name="Friends" component={FriendsScreen} />
         <Stack.Screen name="Compare" component={ProductComparisonScreen} />
         <Stack.Screen name="SharedLists" component={SharedListsScreen} />
         <Stack.Screen name="SharedListDetail" component={SharedListDetailScreen} />

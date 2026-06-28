@@ -144,6 +144,7 @@ export interface ForecastPoint {
 export interface WishlistItem {
   product_id: string;
   saved_price?: number | null;
+  deadline?: string | null;
   is_public?: boolean;
   occasion?: string | null;
   marked_bought_by?: string | null;

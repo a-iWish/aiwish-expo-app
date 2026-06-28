@@ -190,11 +190,16 @@ export function fetchWishlist(): Promise<WishlistResponse> {
 export function addToWishlist(
   productId: string,
   savedPrice?: number | null,
+  deadline?: string | null,
 ): Promise<WishlistItem> {
   return apiFetch<WishlistItem>('/api/wishlist', {
     method: 'POST',
     auth: true,
-    body: { product_id: productId, saved_price: savedPrice ?? null },
+    body: {
+      product_id: productId,
+      saved_price: savedPrice ?? null,
+      deadline: deadline ?? null,
+    },
   });
 }
 
@@ -275,7 +280,7 @@ export function getSharedWishlist(
 
 export function updateWishlistItem(
   productId: string,
-  updates: { is_public?: boolean; occasion?: string; target_date?: string },
+  updates: { is_public?: boolean; occasion?: string; deadline?: string | null },
 ): Promise<WishlistItem> {
   return apiFetch<WishlistItem>(`/api/wishlist/${productId}`, {
     method: 'PATCH',
