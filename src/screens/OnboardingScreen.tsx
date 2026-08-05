@@ -1,8 +1,8 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
   View,
   FlatList,
-  Dimensions,
+  useWindowDimensions,
   StyleSheet,
   TouchableOpacity,
   ViewToken,
@@ -30,7 +30,6 @@ import { verdictColor } from '../utils/verdictStyle';
 import { RootStackParamList } from '../navigation/types';
 
 const ONBOARDING_KEY = 'AIWISH_ONBOARDING_DONE';
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
@@ -64,9 +63,19 @@ const PAGES: PageData[] = [
 export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const flatListRef = useRef<FlatList<PageData>>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexRef = useRef(0);
+
+  // Keep the current page aligned when the viewport resizes (web) or rotates.
+  useEffect(() => {
+    flatListRef.current?.scrollToOffset({
+      offset: width * activeIndexRef.current,
+      animated: false,
+    });
+  }, [width]);
 
   const handleDone = useCallback(async () => {
     await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
@@ -82,6 +91,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0 && viewableItems[0].index != null) {
+        activeIndexRef.current = viewableItems[0].index;
         setActiveIndex(viewableItems[0].index);
       }
     },
@@ -96,22 +106,23 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       <OnboardingPage
         page={item}
         index={index}
+        width={width}
         colors={colors}
         styles={styles}
         isLast={index === PAGES.length - 1}
         onGetStarted={handleDone}
       />
     ),
-    [colors, styles, handleDone],
+    [width, colors, styles, handleDone],
   );
 
   const getItemLayout = useCallback(
     (_: unknown, index: number) => ({
-      length: SCREEN_WIDTH,
-      offset: SCREEN_WIDTH * index,
+      length: width,
+      offset: width * index,
       index,
     }),
-    [],
+    [width],
   );
 
   return (
@@ -143,6 +154,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
         getItemLayout={getItemLayout}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
+        extraData={width}
       />
 
       {/* Dot indicators */}
@@ -166,6 +178,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
 interface OnboardingPageProps {
   page: PageData;
   index: number;
+  width: number;
   colors: ThemeColors;
   styles: ReturnType<typeof createStyles>;
   isLast: boolean;
@@ -173,8 +186,8 @@ interface OnboardingPageProps {
 }
 
 const OnboardingPage: React.FC<OnboardingPageProps> = React.memo(
-  ({ page, index, colors, styles, isLast, onGetStarted }) => (
-    <View style={styles.page}>
+  ({ page, index, width, colors, styles, isLast, onGetStarted }) => (
+    <View style={[styles.page, { width }]}>
       {/* Visual area */}
       <View style={styles.visualArea}>
         {index === 0 && <PageOneVisual colors={colors} styles={styles} />}
@@ -290,7 +303,6 @@ const createStyles = (colors: ThemeColors) =>
 
     /* Page layout */
     page: {
-      width: SCREEN_WIDTH,
       flex: 1,
       justifyContent: 'center',
       paddingHorizontal: spacing.xl,
@@ -300,10 +312,16 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'flex-end',
       alignItems: 'center',
       paddingBottom: spacing.xxl,
+      width: '100%',
+      maxWidth: 460,
+      alignSelf: 'center',
     },
     textArea: {
       flex: 1,
       justifyContent: 'flex-start',
+      width: '100%',
+      maxWidth: 460,
+      alignSelf: 'center',
     },
     headline: {
       fontSize: fontSize.xxl,
