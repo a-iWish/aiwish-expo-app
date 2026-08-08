@@ -73,13 +73,6 @@ const CONFIDENCE_CHIPS = [
 ];
 
 /** Sort options that map to API sort_by values */
-const SORT_CHIPS = [
-  { key: 'confidence', label: 'Best picks' },
-  { key: 'price_asc', label: 'Price ↑' },
-  { key: 'price_desc', label: 'Price ↓' },
-  { key: 'discount', label: 'Biggest drop' },
-];
-
 /** A compact horizontal deal card for the "Best Deals" carousel. */
 const DealCard = React.memo(function DealCard({
   product,
@@ -277,7 +270,6 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
   const [confidenceFilter, setConfidenceFilter] = useState<string | null>(null);
   const [minPriceText, setMinPriceText] = useState('');
   const [maxPriceText, setMaxPriceText] = useState('');
-  const [apiSortBy, setApiSortBy] = useState<string | null>(null);
 
   // Build API filters object
   const apiFilters = useMemo<ProductFilters | undefined>(() => {
@@ -302,13 +294,8 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
       f.maxPrice = maxP;
       hasFilter = true;
     }
-    if (apiSortBy) {
-      f.sortBy = apiSortBy;
-      hasFilter = true;
-    }
-
     return hasFilter ? f : undefined;
-  }, [verdictFilter, confidenceFilter, minPriceText, maxPriceText, apiSortBy]);
+  }, [verdictFilter, confidenceFilter, minPriceText, maxPriceText]);
 
   // Count active filters for badge
   const activeFilterCount = useMemo(() => {
@@ -317,16 +304,14 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
     if (confidenceFilter && confidenceFilter !== 'any') count++;
     if (minPriceText) count++;
     if (maxPriceText) count++;
-    if (apiSortBy) count++;
     return count;
-  }, [verdictFilter, confidenceFilter, minPriceText, maxPriceText, apiSortBy]);
+  }, [verdictFilter, confidenceFilter, minPriceText, maxPriceText]);
 
   const clearAllFilters = useCallback(() => {
     setVerdictFilter(null);
     setConfidenceFilter(null);
     setMinPriceText('');
     setMaxPriceText('');
-    setApiSortBy(null);
   }, []);
 
   const { products, loading, error, refetch } = useProducts(apiFilters);
@@ -337,6 +322,7 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
   // name not on the currently loaded page). Layered on top of the local filter.
   const { results: searchResults, active: searchActive } = useProductSearch(query);
   const queryIsUrl = /^https?:\/\//i.test(query.trim());
+  const isSearching = query.trim().length > 0;
 
   /**
    * Deals carousel: prefer the server-ranked /deals feed; fall back to a
@@ -483,7 +469,12 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
           productCount={products.length}
           filteredCount={filteredProducts.length}
         />
-        {!loading && !error && deals.length > 0 && (
+        {!loading && !error && (
+          <View style={styles.searchTop}>
+            <SearchBar value={query} onChange={setQuery} />
+          </View>
+        )}
+        {!loading && !error && !isSearching && deals.length > 0 && (
           <View style={styles.dealsSection}>
             <View style={styles.dealsSectionHeader}>
               <AppText variant="bodySemibold" style={styles.dealsSectionTitle}>
@@ -504,7 +495,7 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
             />
           </View>
         )}
-        {!loading && !error && recentlyViewedProducts.length > 0 && (
+        {!loading && !error && !isSearching && recentlyViewedProducts.length > 0 && (
           <View style={styles.recentSection}>
             <View style={styles.dealsSectionHeader}>
               <AppText variant="bodySemibold" style={styles.dealsSectionTitle}>
@@ -524,7 +515,6 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
         )}
         {!loading && !error && (
           <View style={styles.filters}>
-            <SearchBar value={query} onChange={setQuery} />
             <FilterChipRow
               label="Category"
               chips={categoryChips}
@@ -645,16 +635,6 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
                     />
                   </View>
                 </View>
-
-                <FilterChipRow
-                  label="API Sort"
-                  chips={SORT_CHIPS}
-                  selectedKey={apiSortBy ?? 'confidence'}
-                  onSelect={(key) =>
-                    setApiSortBy(key === 'confidence' ? null : key)
-                  }
-                  allowDeselect={false}
-                />
               </View>
             )}
           </View>
@@ -684,7 +664,7 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
       confidenceFilter,
       minPriceText,
       maxPriceText,
-      apiSortBy,
+      isSearching,
       clearAllFilters,
       colors,
       styles,
@@ -786,6 +766,9 @@ const createStyles = (colors: ThemeColors) =>
     },
     dealsListContent: {
       paddingHorizontal: spacing.md,
+    },
+    searchTop: {
+      paddingBottom: spacing.sm,
     },
     filters: {
       gap: spacing.md,

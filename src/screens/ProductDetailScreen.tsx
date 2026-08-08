@@ -160,8 +160,12 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     );
   }
 
+  // Prefer the backend's robust trusted price (median of recent trusted-retailer
+  // observations, junk-outlier resistant) so the detail headline matches the list
+  // card. Fall back to the local lowest-offer heuristic, then the raw current price.
   const headlineOffer = lowestCurrentOffer(product, product.stats ?? null);
-  const currentForHeadline = headlineOffer?.price ?? product.current_price ?? null;
+  const currentForHeadline =
+    product.trusted_price ?? headlineOffer?.price ?? product.current_price ?? null;
   const mergedPrediction = mergePredictionSummary(product.prediction, prediction);
   const recKey = normalizeVerdict(
     mergedPrediction?.recommendation ?? product.recommendation,
@@ -199,7 +203,8 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const otherOffers = bestOffer
     ? sortedRows.filter((row) => row !== bestOffer)
     : sortedRows;
-  const retailerForCTA = headlineOffer?.retailer ?? product.retailer ?? 'retailer';
+  const retailerForCTA =
+    product.trusted_source ?? headlineOffer?.retailer ?? product.retailer ?? 'retailer';
 
   const formatDeadlineDisplay = (date: Date): string => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
