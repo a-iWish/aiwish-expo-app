@@ -46,6 +46,7 @@ import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { useAuth } from '../context/AuthContext';
 import { buildRetailerPurchaseUrl } from '../utils/retailerPurchaseUrl';
 import { normalizeVerdict } from '../utils/verdictStyle';
+import { toISODate, parseISODate } from '../utils/dateOnly';
 import { estimateTrueCost, DEFAULT_TAX_RATE } from '../utils/trueCost';
 import { bestMonthToBuy } from '../utils/bestTimeToBuy';
 
@@ -93,7 +94,7 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   useEffect(() => {
     if (deadlineInitRef.current || !savedDeadline) return;
     deadlineInitRef.current = true;
-    setDeadline(new Date(savedDeadline));
+    setDeadline(parseISODate(savedDeadline));
   }, [savedDeadline, setDeadline]);
 
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -107,7 +108,7 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       setDeadline(selectedDate);
       // Persist immediately if this product is already saved.
       if (isWatched(productId)) {
-        updateDeadline(productId, selectedDate.toISOString().split('T')[0]);
+        updateDeadline(productId, toISODate(selectedDate));
       }
     },
     [setDeadline, isWatched, productId, updateDeadline],
@@ -220,7 +221,7 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       navigation.navigate('Login');
       return;
     }
-    const deadlineIso = deadline ? deadline.toISOString().split('T')[0] : null;
+    const deadlineIso = deadline ? toISODate(deadline) : null;
     toggleWishlist(productId, currentForHeadline, deadlineIso);
   };
 

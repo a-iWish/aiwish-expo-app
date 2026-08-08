@@ -23,9 +23,9 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, subtitle }) =
     <View style={styles.wrap}>
       <BrandBar />
 
-      {isAuthenticated && (
+      {isAuthenticated && user && (
         <AppText variant="meta" style={styles.greeting}>
-          Welcome back, {firstName(user?.full_name, user?.email)}
+          Welcome back, {firstName(user.full_name, user.email)}
         </AppText>
       )}
 
