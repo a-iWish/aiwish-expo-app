@@ -28,7 +28,7 @@ import { AppText, Button } from '../components';
 import { RecommendationBadge } from '../components/RecommendationBadge';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeColors, spacing, borderRadius } from '../styles/theme';
-import { SHARED_LISTS_KEY } from './SharedListsScreen';
+import { SHARED_LISTS_KEY } from '../components/SharedListsPanel';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SharedListDetail'>;
 

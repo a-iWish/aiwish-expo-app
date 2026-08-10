@@ -107,19 +107,6 @@ export const SettingsScreen: React.FC = () => {
             <View style={styles.divider} />
             <Pressable
               style={styles.row}
-              onPress={() => navigation.navigate('SharedLists')}
-              accessibilityRole="button"
-            >
-              <AppText variant="body">Shared Lists</AppText>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={colors.textSecondary}
-              />
-            </Pressable>
-            <View style={styles.divider} />
-            <Pressable
-              style={styles.row}
               onPress={logout}
               accessibilityRole="button"
             >

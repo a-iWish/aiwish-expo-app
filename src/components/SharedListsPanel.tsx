@@ -8,19 +8,20 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { RootStackParamList } from '../navigation/types';
 import { SharedListSummary } from '../types/product';
 import { createSharedList, joinSharedList, fetchSharedLists } from '../services/api';
-import { AppText, Button } from '../components';
+import { AppText } from './AppText';
+import { Button } from './Button';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeColors, spacing, borderRadius } from '../styles/theme';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'SharedLists'>;
-
 export const SHARED_LISTS_KEY = ['lists', 'mine'] as const;
+
+interface SharedListsPanelProps {
+  /** Open a list's detail screen (create/join success + row tap). */
+  onOpenList: (listId: string) => void;
+}
 
 const ListRow = React.memo(function ListRow({
   item,
@@ -39,8 +40,8 @@ const ListRow = React.memo(function ListRow({
           {item.name}
         </AppText>
         <AppText variant="meta" style={styles.meta}>
-          {item.occasion ? `${item.occasion} \u00b7 ` : ''}
-          {item.member_count} {item.member_count === 1 ? 'member' : 'members'} {'\u00b7'}{' '}
+          {item.occasion ? `${item.occasion} · ` : ''}
+          {item.member_count} {item.member_count === 1 ? 'member' : 'members'} {'·'}{' '}
           {item.item_count} {item.item_count === 1 ? 'item' : 'items'}
         </AppText>
       </View>
@@ -53,7 +54,11 @@ const ListRow = React.memo(function ListRow({
   );
 });
 
-export const SharedListsScreen: React.FC<Props> = ({ navigation }) => {
+/**
+ * The Shared Lists content (create / join / list of lists), without any screen
+ * chrome, so it can be embedded under the Wishlist tab's "Shared" segment.
+ */
+export const SharedListsPanel: React.FC<SharedListsPanelProps> = ({ onOpenList }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
@@ -71,7 +76,7 @@ export const SharedListsScreen: React.FC<Props> = ({ navigation }) => {
     onSuccess: (summary) => {
       setName('');
       invalidate();
-      navigation.navigate('SharedListDetail', { listId: summary.id });
+      onOpenList(summary.id);
     },
     onError: (err: Error) => Alert.alert('Error', err.message || 'Could not create list'),
   });
@@ -81,7 +86,7 @@ export const SharedListsScreen: React.FC<Props> = ({ navigation }) => {
     onSuccess: (summary) => {
       setCode('');
       invalidate();
-      navigation.navigate('SharedListDetail', { listId: summary.id });
+      onOpenList(summary.id);
     },
     onError: (err: Error) => Alert.alert('Error', err.message || 'Could not join list'),
   });
@@ -98,34 +103,17 @@ export const SharedListsScreen: React.FC<Props> = ({ navigation }) => {
     joinMutation.mutate(trimmed);
   }, [code, joinMutation]);
 
-  const handleOpen = useCallback(
-    (listId: string) => navigation.navigate('SharedListDetail', { listId }),
-    [navigation],
-  );
-
   const renderItem = useCallback(
     ({ item }: { item: SharedListSummary }) => (
-      <ListRow item={item} colors={colors} onPress={handleOpen} />
+      <ListRow item={item} colors={colors} onPress={onOpenList} />
     ),
-    [colors, handleOpen],
+    [colors, onOpenList],
   );
 
   const lists = listsQuery.data?.lists ?? [];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={8}>
-          <AppText variant="body" style={{ color: colors.brandEnd }}>
-            Back
-          </AppText>
-        </Pressable>
-        <AppText variant="title" style={styles.headerTitle}>
-          Shared Lists
-        </AppText>
-        <View style={styles.backBtn} />
-      </View>
-
+    <View style={styles.container}>
       <View style={styles.actionRow}>
         <TextInput
           value={name}
@@ -182,23 +170,13 @@ export const SharedListsScreen: React.FC<Props> = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      backgroundColor: colors.headerBg,
-    },
-    backBtn: { width: 60, minHeight: 44, justifyContent: 'center' },
-    headerTitle: { flex: 1, textAlign: 'center' },
+    container: { flex: 1 },
     actionRow: {
       flexDirection: 'row',
       alignItems: 'center',

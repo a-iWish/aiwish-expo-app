@@ -21,6 +21,8 @@ import { Product, WishlistItem } from '../types/product';
 import { shareWishlist, updateWishlistItem } from '../services/api';
 import { EditorialProductRow, AppText, Button } from '../components';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { SegmentedControl } from '../components/SegmentedControl';
+import { SharedListsPanel } from '../components/SharedListsPanel';
 import { normalizeVerdict } from '../utils/verdictStyle';
 import { SkeletonEditorialRow } from '../components/SkeletonEditorialRow';
 import { useTheme } from '../context/ThemeContext';
@@ -39,6 +41,9 @@ type Props = {
 };
 
 const MemoRow = React.memo(EditorialProductRow);
+
+const WISHLIST_TABS = ['Mine', 'Shared'] as const;
+type WishlistTab = (typeof WISHLIST_TABS)[number];
 
 /** Common gift occasions offered in the occasion picker. */
 const OCCASIONS = [
@@ -86,6 +91,7 @@ export const WishlistScreen: React.FC<Props> = ({ navigation }) => {
   const { products, loading, error, refetch } = useProducts();
   const [refreshing, setRefreshing] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [tab, setTab] = useState<WishlistTab>('Mine');
   // Product whose occasion is being edited (drives the occasion picker modal).
   const [occasionTarget, setOccasionTarget] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -274,6 +280,18 @@ export const WishlistScreen: React.FC<Props> = ({ navigation }) => {
         showBrand
       />
 
+      {isAuthenticated && (
+        <View style={styles.segmentWrap}>
+          <SegmentedControl options={WISHLIST_TABS} value={tab} onChange={setTab} />
+        </View>
+      )}
+
+      {isAuthenticated && tab === 'Shared' ? (
+        <SharedListsPanel
+          onOpenList={(listId) => navigation.navigate('SharedListDetail', { listId })}
+        />
+      ) : (
+      <>
       {wishlistProducts.length > 0 && (
         <View style={styles.dashboard}>
           <View style={styles.dashStat}>
@@ -388,7 +406,7 @@ export const WishlistScreen: React.FC<Props> = ({ navigation }) => {
       )}
 
       <Modal
-        visible={occasionTarget !== null}
+        visible={occasionTarget !== null && tab === 'Mine'}
         transparent
         animationType="fade"
         onRequestClose={() => setOccasionTarget(null)}
@@ -436,6 +454,8 @@ export const WishlistScreen: React.FC<Props> = ({ navigation }) => {
           </Pressable>
         </Pressable>
       </Modal>
+      </>
+      )}
     </SafeAreaView>
   );
 };
@@ -445,6 +465,10 @@ const createStyles = (colors: ThemeColors) =>
     container: {
       flex: 1,
       backgroundColor: colors.background,
+    },
+    segmentWrap: {
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.sm,
     },
     centered: {
       flex: 1,
