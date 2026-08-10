@@ -21,7 +21,6 @@ import { EditProfileScreen } from './src/screens/EditProfileScreen';
 import { ChangePasswordScreen } from './src/screens/ChangePasswordScreen';
 import { SharedWishlistScreen } from './src/screens/SharedWishlistScreen';
 import { ProductComparisonScreen } from './src/screens/ProductComparisonScreen';
-import { SharedListsScreen } from './src/screens/SharedListsScreen';
 import { SharedListDetailScreen } from './src/screens/SharedListDetailScreen';
 import { MainTabs } from './src/navigation/MainTabs';
 import { RootStackParamList } from './src/navigation/types';
@@ -138,7 +137,6 @@ function AppNavigator() {
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
         <Stack.Screen name="Compare" component={ProductComparisonScreen} />
-        <Stack.Screen name="SharedLists" component={SharedListsScreen} />
         <Stack.Screen name="SharedListDetail" component={SharedListDetailScreen} />
       </Stack.Navigator>
     </>

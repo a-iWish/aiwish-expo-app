@@ -11,7 +11,6 @@ export type RootStackParamList = {
   EditProfile: undefined;
   ChangePassword: undefined;
   Compare: undefined;
-  SharedLists: undefined;
   SharedListDetail: { listId: string };
 };
 
