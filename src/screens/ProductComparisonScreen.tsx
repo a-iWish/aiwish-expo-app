@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, StyleSheet, Pressable, Image, ScrollView } from 'react-native';
+import { View, StyleSheet, Pressable, Image, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
@@ -108,8 +108,14 @@ export const ProductComparisonScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { ids } = useWishlist();
-  const { products } = useProducts();
+  const { products, refetch } = useProducts();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   const wishlistProducts = useMemo(
     () => products.filter((p) => ids.includes(p.id)),
@@ -182,7 +188,17 @@ export const ProductComparisonScreen: React.FC<Props> = ({ navigation }) => {
           </AppText>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.tableWrap} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.tableWrap}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brandEnd}
+            />
+          }
+        >
           <View style={styles.tableHeaderRow}>
             <View style={styles.metricLabelCell} />
             {selected.map((p) => (

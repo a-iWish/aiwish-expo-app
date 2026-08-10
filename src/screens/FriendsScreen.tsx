@@ -8,6 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   Keyboard,
+  RefreshControl,
+  ScrollView,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -152,6 +154,13 @@ export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
     [navigation],
   );
 
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([followingQuery.refetch(), wishesQuery.refetch()]);
+    setRefreshing(false);
+  }, [followingQuery, wishesQuery]);
+
   const renderItem = useCallback(
     ({ item }: { item: FriendWishItem }) => (
       <WishRow item={item} colors={colors} onPress={handleOpenProduct} />
@@ -258,14 +267,25 @@ export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
           <ActivityIndicator size="large" color={colors.brandEnd} />
         </View>
       ) : wishes.length === 0 ? (
-        <View style={styles.empty}>
-          <AppText variant="title" style={styles.emptyTitle}>
-            No friends' wishes yet
-          </AppText>
-          <AppText variant="caption" style={styles.emptyBody}>
-            Follow someone by email to see the public items on their wishlist.
-          </AppText>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.emptyScroll}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brandEnd}
+            />
+          }
+        >
+          <View style={styles.empty}>
+            <AppText variant="title" style={styles.emptyTitle}>
+              No friends' wishes yet
+            </AppText>
+            <AppText variant="caption" style={styles.emptyBody}>
+              Follow someone by email to see the public items on their wishlist.
+            </AppText>
+          </View>
+        </ScrollView>
       ) : (
         <FlashList
           data={wishes}
@@ -273,6 +293,13 @@ export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brandEnd}
+            />
+          }
         />
       )}
     </SafeAreaView>
@@ -368,6 +395,9 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       padding: spacing.lg,
       gap: spacing.sm,
+    },
+    emptyScroll: {
+      flexGrow: 1,
     },
     empty: {
       flex: 1,

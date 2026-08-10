@@ -6,6 +6,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -125,10 +126,17 @@ export const SharedWishlistScreen: React.FC<Props> = ({ route, navigation }) => 
 
   const queryKey = ['shared-wishlist', token, giftMode] as const;
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey,
     queryFn: () => getSharedWishlist(token, giftMode),
   });
+
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   const markMutation = useMutation({
     mutationFn: (productId: string) => markBought(token, productId),
@@ -234,6 +242,13 @@ export const SharedWishlistScreen: React.FC<Props> = ({ route, navigation }) => 
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brandEnd}
+            />
+          }
         />
       )}
     </SafeAreaView>

@@ -6,6 +6,8 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  RefreshControl,
+  ScrollView,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -66,6 +68,12 @@ export const SharedListsPanel: React.FC<SharedListsPanelProps> = ({ onOpenList }
   const [code, setCode] = useState('');
 
   const listsQuery = useQuery({ queryKey: SHARED_LISTS_KEY, queryFn: fetchSharedLists });
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await listsQuery.refetch();
+    setRefreshing(false);
+  }, [listsQuery]);
 
   const invalidate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: SHARED_LISTS_KEY });
@@ -154,13 +162,24 @@ export const SharedListsPanel: React.FC<SharedListsPanelProps> = ({ onOpenList }
           <ActivityIndicator size="large" color={colors.brandEnd} />
         </View>
       ) : lists.length === 0 ? (
-        <View style={styles.centered}>
-          <AppText variant="title">No shared lists yet</AppText>
-          <AppText variant="caption" style={styles.emptyBody}>
-            Create a list for a group gift or shared household, then share the
-            invite code so others can add items too.
-          </AppText>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.emptyScroll}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brandEnd}
+            />
+          }
+        >
+          <View style={styles.centered}>
+            <AppText variant="title">No shared lists yet</AppText>
+            <AppText variant="caption" style={styles.emptyBody}>
+              Create a list for a group gift or shared household, then share the
+              invite code so others can add items too.
+            </AppText>
+          </View>
+        </ScrollView>
       ) : (
         <FlashList
           data={lists}
@@ -168,6 +187,13 @@ export const SharedListsPanel: React.FC<SharedListsPanelProps> = ({ onOpenList }
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brandEnd}
+            />
+          }
         />
       )}
     </View>
@@ -195,6 +221,7 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.surface,
     },
     actionBtn: { minWidth: 90 },
+    emptyScroll: { flexGrow: 1 },
     centered: {
       flex: 1,
       alignItems: 'center',
