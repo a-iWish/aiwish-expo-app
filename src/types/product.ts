@@ -196,6 +196,16 @@ export interface FollowingResponse {
   following: FollowedUser[];
 }
 
+export interface UserSuggestion {
+  id: string;
+  email: string;
+  full_name?: string | null;
+}
+
+export interface UserSearchResponse {
+  results: UserSuggestion[];
+}
+
 /** A public wishlist entry from someone you follow (GET /api/social/friends-wishes). */
 export interface FriendWishItem {
   owner_id: string;

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,6 +7,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,12 +16,13 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
-import { FriendWishItem } from '../types/product';
+import { FriendWishItem, UserSuggestion } from '../types/product';
 import {
   followUser,
   unfollowUser,
   fetchFollowing,
   fetchFriendsWishes,
+  searchUsers,
 } from '../services/api';
 import { AppText, Button } from '../components';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -85,6 +87,20 @@ export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
   const [email, setEmail] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+
+  // Debounce the input so we don't fire a search request on every keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(email.trim()), 250);
+    return () => clearTimeout(t);
+  }, [email]);
+
+  const suggestQuery = useQuery({
+    queryKey: ['social', 'search-users', debouncedQuery],
+    queryFn: () => searchUsers(debouncedQuery),
+    enabled: isAuthenticated && debouncedQuery.length >= 2,
+    staleTime: 30_000,
+  });
 
   const followingQuery = useQuery({
     queryKey: FOLLOWING_KEY,
@@ -123,6 +139,14 @@ export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
     followMutation.mutate(trimmed);
   }, [email, followMutation]);
 
+  const handlePickSuggestion = useCallback(
+    (u: UserSuggestion) => {
+      Keyboard.dismiss();
+      followMutation.mutate(u.email);
+    },
+    [followMutation],
+  );
+
   const handleOpenProduct = useCallback(
     (productId: string) => navigation.navigate('ProductDetail', { productId }),
     [navigation],
@@ -137,6 +161,9 @@ export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
 
   const following = followingQuery.data?.following ?? [];
   const wishes = wishesQuery.data?.items ?? [];
+  const suggestions = suggestQuery.data?.results ?? [];
+  const showSuggestions =
+    email.trim().length >= 2 && !followMutation.isPending && suggestions.length > 0;
 
   if (!isAuthenticated) {
     return (
@@ -180,6 +207,29 @@ export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
           style={styles.followBtn}
         />
       </View>
+
+      {showSuggestions && (
+        <View style={styles.suggestions}>
+          {suggestions.map((u) => (
+            <Pressable
+              key={u.id}
+              style={styles.suggestion}
+              onPress={() => handlePickSuggestion(u)}
+              accessibilityRole="button"
+              accessibilityLabel={`Follow ${u.full_name || u.email}`}
+            >
+              <AppText variant="bodySemibold" numberOfLines={1}>
+                {u.full_name || u.email}
+              </AppText>
+              {u.full_name ? (
+                <AppText variant="caption" style={styles.suggestionEmail} numberOfLines={1}>
+                  {u.email}
+                </AppText>
+              ) : null}
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {following.length > 0 && (
         <View style={styles.chips}>
@@ -271,6 +321,28 @@ const createStyles = (colors: ThemeColors) =>
     },
     followBtn: {
       minWidth: 90,
+    },
+    suggestions: {
+      marginHorizontal: spacing.md,
+      marginTop: -spacing.xs,
+      marginBottom: spacing.sm,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.cardBg,
+      overflow: 'hidden',
+    },
+    suggestion: {
+      minHeight: 48,
+      justifyContent: 'center',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    suggestionEmail: {
+      color: colors.textSecondary,
+      marginTop: 1,
     },
     chips: {
       flexDirection: 'row',

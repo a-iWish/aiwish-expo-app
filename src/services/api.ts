@@ -12,6 +12,7 @@ import {
   SharedWishlistResponse,
   MarkBoughtResponse,
   FollowingResponse,
+  UserSearchResponse,
   FriendsWishesResponse,
   SharedListSummary,
   SharedListsResponse,
@@ -225,6 +226,13 @@ export function unfollowUser(followingId: string): Promise<{ ok: boolean }> {
     method: 'DELETE',
     auth: true,
   });
+}
+
+export function searchUsers(q: string): Promise<UserSearchResponse> {
+  return apiFetch<UserSearchResponse>(
+    `/api/social/search-users?q=${encodeURIComponent(q)}`,
+    { method: 'GET', auth: true },
+  );
 }
 
 export function fetchFollowing(): Promise<FollowingResponse> {

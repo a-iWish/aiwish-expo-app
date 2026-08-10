@@ -37,13 +37,17 @@ export const BrandWordmark: React.FC<Props> = ({
     };
   }, [textStyle]);
 
+  // Default the "a." + "ı" stem to the theme text color so they stay visible in
+  // both light and dark mode. Placed before textStyle so a caller can still
+  // override the color explicitly.
   const iTextStyle = useMemo(
     () => [
+      { color: colors.text },
       textStyle,
       styles.iGlyph,
       Platform.OS === 'android' ? styles.iGlyphAndroid : null,
     ],
-    [textStyle],
+    [textStyle, colors.text],
   );
 
   const onStemLayout = useCallback((e: LayoutChangeEvent) => {
@@ -77,7 +81,7 @@ export const BrandWordmark: React.FC<Props> = ({
       accessibilityRole="text"
       accessibilityLabel={accessibilityLabel}
     >
-      <Text style={textStyle}>a.</Text>
+      <Text style={[{ color: colors.text }, textStyle]}>a.</Text>
       <View style={styles.iBlock}>
         <Text style={iTextStyle} onLayout={onStemLayout}>
           {I_DOTLESS}
