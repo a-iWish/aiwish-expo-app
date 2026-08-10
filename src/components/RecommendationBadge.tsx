@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { MONO_FONT } from '../styles/theme';
+import { normalizeVerdict } from '../utils/verdictStyle';
 
 interface RecommendationBadgeProps {
   recommendation: string | null;
@@ -18,7 +19,9 @@ export const RecommendationBadge: React.FC<RecommendationBadgeProps> = ({
   const isLarge = size === 'large';
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
-  const key = recommendation?.toUpperCase() ?? 'ANALYZING';
+  // Shared verdict mapping: BUY_ELSEWHERE -> BUY, and only a truly absent
+  // verdict falls through to the "Analyzing" placeholder.
+  const key = normalizeVerdict(recommendation);
   const isAnalyzing = key !== 'BUY' && key !== 'WAIT';
 
   useEffect(() => {
