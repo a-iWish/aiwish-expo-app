@@ -130,7 +130,7 @@ t=... lvl=info msg="started tunnel" ... url=https://<your-domain>.ngrok-free.app
 ```
 
 Sanity check from your phone **on cellular** (Wi-Fi off):
-`https://<your-domain>.ngrok-free.app/v1/products?limit=3` → JSON (you may see an ngrok warning page in the browser — that's expected; the app itself skips it via a header).
+`https://<your-domain>.ngrok-free.app/api/products?limit=3` → JSON (you may see an ngrok warning page in the browser — that's expected; the app itself skips it via a header).
 
 From now on the tunnel auto-starts on boot, restarts if it dies, and the URL never changes.
 
@@ -160,7 +160,7 @@ From now on the tunnel auto-starts on boot, restarts if it dies, and the URL nev
 ## Part 4 — DEMO DAY MORNING RUNBOOK (~5 min)
 
 **□ 1. Verify from your phone on cellular:**
-- `https://<your-domain>.ngrok-free.app/v1/products?limit=3` → JSON
+- `https://<your-domain>.ngrok-free.app/api/products?limit=3` → JSON
 - the Vercel URL → products load in the web app
 - the app on each demo iPhone → products load
 
