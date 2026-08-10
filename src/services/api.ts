@@ -21,7 +21,7 @@ import { apiFetch } from './httpClient';
 
 function normalizeRecommendation(rec: unknown): string {
   const v = String(rec ?? '').trim().toLowerCase();
-  if (v === 'buy' || v === 'wait' || v === 'hold') return v;
+  if (v === 'buy' || v === 'wait') return v;
   return v || 'wait';
 }
 

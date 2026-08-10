@@ -24,7 +24,6 @@ export function insightHeadline(
     return null;
   }
   if (verdict === 'wait' && normalized.includes('wait')) return null;
-  if (verdict === 'hold' && normalized.includes('watch')) return null;
   return capitalizeFirst(title);
 }
 

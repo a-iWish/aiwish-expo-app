@@ -240,12 +240,11 @@ const PageOneVisual: React.FC<{ colors: ThemeColors; styles: ReturnType<typeof c
     </View>
   );
 
-/** Page 2: BUY / WAIT / HOLD verdict words stacked. */
+/** Page 2: BUY / WAIT verdict words stacked. */
 const PageTwoVisual: React.FC<{ colors: ThemeColors; styles: ReturnType<typeof createStyles> }> =
   ({ colors, styles }) => {
     const buyColor = verdictColor('BUY', colors);
     const waitColor = verdictColor('WAIT', colors);
-    const holdColor = verdictColor('HOLD', colors);
 
     return (
       <View style={styles.visualInner}>

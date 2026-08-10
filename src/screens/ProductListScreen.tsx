@@ -47,7 +47,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 type SortMode = 'verdict' | 'price' | 'drop';
 
-const VERDICT_ORDER: Record<string, number> = { BUY: 0, WAIT: 1, HOLD: 2 };
+const VERDICT_ORDER: Record<string, number> = { BUY: 0, WAIT: 1 };
 
 type Props = {
   navigation: CompositeNavigationProp<
@@ -61,7 +61,6 @@ const VERDICT_CHIPS = [
   { key: 'all', label: 'All' },
   { key: 'buy', label: 'BUY' },
   { key: 'wait', label: 'WAIT' },
-  { key: 'hold', label: 'HOLD' },
 ];
 
 /** Confidence filter options */
@@ -402,9 +401,10 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
 
     if (sortMode === 'verdict') {
       list.sort((a, b) => {
-        const ak = normalizeVerdict(a.recommendation) ?? 'HOLD';
-        const bk = normalizeVerdict(b.recommendation) ?? 'HOLD';
-        const order = (VERDICT_ORDER[ak] ?? 3) - (VERDICT_ORDER[bk] ?? 3);
+        // Unknown / still-analyzing verdicts sort last (rank 3).
+        const order =
+          (VERDICT_ORDER[normalizeVerdict(a.recommendation) ?? ''] ?? 3) -
+          (VERDICT_ORDER[normalizeVerdict(b.recommendation) ?? ''] ?? 3);
         if (order !== 0) return order;
         return (b.confidence ?? 0) - (a.confidence ?? 0);
       });
