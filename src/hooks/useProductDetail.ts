@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ProductDetail,
   MonthlyPricePoint,
@@ -89,15 +89,19 @@ export function useProductDetail(productId: string) {
   const [selectedRetailer, setSelectedRetailer] = useState<string | null>(null);
   const [comparisonRows, setComparisonRows] = useState<RetailerPriceRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deadline, setDeadline] = useState<Date | null>(null);
+  // Monotonic request id: guards against stale responses from a superseded
+  // load (deadline/productId change or unmount) overwriting fresh state.
+  const reqRef = useRef(0);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
+  const load = useCallback(async (isRefresh: boolean) => {
+    const myReq = ++reqRef.current;
+    const stale = () => reqRef.current !== myReq;
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setError(null);
       try {
         const deadlineStr = deadline ? toISODate(deadline) : null;
         const [detail, pred, ret] = await Promise.all([
@@ -106,7 +110,7 @@ export function useProductDetail(productId: string) {
           fetchRetailers(productId).catch(() => ({ retailers: [] as string[] })),
         ]);
 
-        if (cancelled) return;
+        if (stale()) return;
 
         const deduped = [...new Set(ret?.retailers ?? [])];
         const trustedRetailers = deduped.filter(isTrustedRetailer);
@@ -122,7 +126,7 @@ export function useProductDetail(productId: string) {
         ]);
         const allPoints: PriceObservationPoint[] = seriesRes.points ?? [];
 
-        if (cancelled) return;
+        if (stale()) return;
 
         const byRetailer = groupPointsByRetailer(allPoints);
 
@@ -189,7 +193,7 @@ export function useProductDetail(productId: string) {
           });
         }
 
-        if (cancelled) return;
+        if (stale()) return;
         setProduct(detail);
         setAllRetailerSeries(combinedSeries);
         setPriceHistory(defaultHistory);
@@ -198,16 +202,23 @@ export function useProductDetail(productId: string) {
         setSelectedRetailer(defaultRetailer);
         setComparisonRows(sortComparisonRows(rows));
       } catch (err) {
-        if (cancelled) return;
+        if (stale()) return;
         setError(err instanceof Error ? err.message : 'Failed to load product');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!stale()) {
+          if (isRefresh) setRefreshing(false);
+          else setLoading(false);
+        }
       }
-    }
-
-    load();
-    return () => { cancelled = true; };
   }, [productId, deadline]);
+
+  useEffect(() => {
+    load(false);
+    // Superseding the request id cancels any in-flight load on unmount / change.
+    return () => { reqRef.current++; };
+  }, [load]);
+
+  const refresh = useCallback(() => load(true), [load]);
 
   const selectRetailer = useCallback(
     (retailer: string | null) => {
@@ -230,6 +241,8 @@ export function useProductDetail(productId: string) {
     selectRetailer,
     comparisonRows,
     loading,
+    refreshing,
+    refresh,
     error,
     deadline,
     setDeadline,

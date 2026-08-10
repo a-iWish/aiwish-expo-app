@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,6 +8,8 @@ import {
   Share,
   Alert,
   ActivityIndicator,
+  TextInput,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -21,7 +23,7 @@ import {
   claimSharedListItem,
   leaveSharedList,
 } from '../services/api';
-import { useProducts } from '../hooks/useProducts';
+import { useProducts, useProductSearch } from '../hooks/useProducts';
 import { useWishlist } from '../hooks/useWishlist';
 import { useAuth } from '../context/AuthContext';
 import { AppText, Button } from '../components';
@@ -83,6 +85,13 @@ export const SharedListDetailScreen: React.FC<Props> = ({ navigation, route }) =
   const detail = detailQuery.data;
   const isOwner = detail?.role === 'owner';
 
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await detailQuery.refetch();
+    setRefreshing(false);
+  }, [detailQuery]);
+
   const handleShareCode = useCallback(() => {
     if (!detail) return;
     Share.share({
@@ -116,6 +125,20 @@ export const SharedListDetailScreen: React.FC<Props> = ({ navigation, route }) =
     const watched = new Set(wishlistIds);
     return products.filter((p) => watched.has(p.id) && !existingProductIds.has(p.id));
   }, [products, wishlistIds, existingProductIds]);
+
+  // Full-catalog search so any product can be added, not just wishlist items.
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+  const { results: searchResults, searching, active: searchActive } =
+    useProductSearch(debouncedSearch);
+  const searchCandidates = useMemo(
+    () => searchResults.filter((p) => !existingProductIds.has(p.id)).slice(0, 8),
+    [searchResults, existingProductIds],
+  );
 
   if (detailQuery.isLoading) {
     return (
@@ -152,7 +175,17 @@ export const SharedListDetailScreen: React.FC<Props> = ({ navigation, route }) =
         <View style={styles.backBtn} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.brandEnd}
+          />
+        }
+      >
         <View style={styles.inviteCard}>
           <View style={{ flex: 1 }}>
             <AppText variant="meta" style={styles.inviteLabel}>
@@ -178,6 +211,47 @@ export const SharedListDetailScreen: React.FC<Props> = ({ navigation, route }) =
             </View>
           ))}
         </View>
+
+        <AppText variant="meta" style={styles.sectionLabel}>
+          Add products
+        </AppText>
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search the catalog…"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={styles.searchInput}
+        />
+        {searchActive &&
+          (searching && searchCandidates.length === 0 ? (
+            <ActivityIndicator color={colors.brandEnd} style={styles.searchLoading} />
+          ) : searchCandidates.length === 0 ? (
+            <AppText variant="caption" style={styles.emptyBody}>
+              No matching products.
+            </AppText>
+          ) : (
+            searchCandidates.map((p) => (
+              <Pressable
+                key={p.id}
+                style={styles.resultRow}
+                onPress={() => addMutation.mutate(p.id)}
+              >
+                {p.image_url ? (
+                  <Image source={{ uri: p.image_url }} style={styles.resultThumb} resizeMode="contain" />
+                ) : (
+                  <View style={[styles.resultThumb, styles.thumbPlaceholder]} />
+                )}
+                <AppText variant="bodySemibold" numberOfLines={2} style={styles.resultName}>
+                  {p.name}
+                </AppText>
+                <AppText variant="caption" style={styles.addPlus}>
+                  + Add
+                </AppText>
+              </Pressable>
+            ))
+          ))}
 
         {addable.length > 0 && (
           <>
@@ -217,8 +291,8 @@ export const SharedListDetailScreen: React.FC<Props> = ({ navigation, route }) =
         </AppText>
         {detail.items.length === 0 ? (
           <AppText variant="caption" style={styles.emptyBody}>
-            No items yet. Add products from your wishlist above, or ask a member
-            to add some.
+            No items yet. Search the catalog or add from your wishlist above, or
+            ask a member to add some.
           </AppText>
         ) : (
           detail.items.map((item) => (
@@ -382,6 +456,26 @@ const createStyles = (colors: ThemeColors) =>
     thumbPlaceholder: { backgroundColor: colors.surface2 },
     addName: { color: colors.text },
     addPlus: { color: colors.brandEnd },
+    searchInput: {
+      minHeight: 44,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.button,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.text,
+      backgroundColor: colors.surface,
+    },
+    searchLoading: { marginTop: spacing.md, alignSelf: 'flex-start' },
+    resultRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingVertical: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    resultThumb: { width: 44, height: 44, borderRadius: borderRadius.sm },
+    resultName: { flex: 1, color: colors.text },
     emptyBody: { color: colors.textSecondary, maxWidth: 320 },
     leaveBtn: { marginTop: spacing.lg },
   });

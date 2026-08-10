@@ -8,6 +8,7 @@ import {
   Pressable,
   Linking,
   Platform,
+  RefreshControl,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
@@ -74,6 +75,8 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     comparisonRows,
     prediction,
     loading,
+    refreshing,
+    refresh,
     error,
     deadline,
     setDeadline,
@@ -334,6 +337,13 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={colors.brandEnd}
+          />
+        }
       >
         <Animated.View entering={FadeInUp.duration(500)}>
           <VerdictDisplay

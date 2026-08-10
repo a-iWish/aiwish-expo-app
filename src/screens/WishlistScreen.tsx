@@ -23,6 +23,8 @@ import { EditorialProductRow, AppText, Button } from '../components';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SharedListsPanel } from '../components/SharedListsPanel';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import { normalizeVerdict } from '../utils/verdictStyle';
 import { SkeletonEditorialRow } from '../components/SkeletonEditorialRow';
 import { useTheme } from '../context/ThemeContext';
@@ -272,6 +274,22 @@ export const WishlistScreen: React.FC<Props> = ({ navigation }) => {
 
   const activeOccasion = occasionTarget ? itemMap[occasionTarget]?.occasion ?? null : null;
 
+  // Swipe left/right between the Mine and Shared segments. activeOffsetX +
+  // failOffsetY let the vertical lists keep scrolling normally.
+  const swipe = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(isAuthenticated)
+        .activeOffsetX([-24, 24])
+        .failOffsetY([-16, 16])
+        .onEnd((e) => {
+          'worklet';
+          if (e.translationX <= -60 && tab === 'Mine') runOnJS(setTab)('Shared');
+          else if (e.translationX >= 60 && tab === 'Shared') runOnJS(setTab)('Mine');
+        }),
+    [isAuthenticated, tab],
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScreenHeader
@@ -286,6 +304,8 @@ export const WishlistScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       )}
 
+      <GestureDetector gesture={swipe}>
+      <View style={styles.pagerArea}>
       {isAuthenticated && tab === 'Shared' ? (
         <SharedListsPanel
           onOpenList={(listId) => navigation.navigate('SharedListDetail', { listId })}
@@ -456,6 +476,8 @@ export const WishlistScreen: React.FC<Props> = ({ navigation }) => {
       </Modal>
       </>
       )}
+      </View>
+      </GestureDetector>
     </SafeAreaView>
   );
 };
@@ -469,6 +491,9 @@ const createStyles = (colors: ThemeColors) =>
     segmentWrap: {
       paddingHorizontal: spacing.md,
       paddingBottom: spacing.sm,
+    },
+    pagerArea: {
+      flex: 1,
     },
     centered: {
       flex: 1,
