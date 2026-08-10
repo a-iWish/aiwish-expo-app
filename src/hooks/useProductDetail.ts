@@ -17,6 +17,7 @@ import {
 } from '../services/api';
 import { keepaResponseToAmazonMonthly } from '../utils/keepaSeriesAggregate';
 import { isTrustedRetailer } from '../utils/trustedRetailers';
+import { toISODate } from '../utils/dateOnly';
 import {
   aggregateToMonthlyPoints,
   buildRetailerSeriesForChart,
@@ -98,9 +99,7 @@ export function useProductDetail(productId: string) {
       setLoading(true);
       setError(null);
       try {
-        const deadlineStr = deadline
-          ? deadline.toISOString().split('T')[0]
-          : null;
+        const deadlineStr = deadline ? toISODate(deadline) : null;
         const [detail, pred, ret] = await Promise.all([
           fetchProduct(productId),
           fetchPrediction(productId, deadlineStr).catch(() => null),

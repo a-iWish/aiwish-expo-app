@@ -25,8 +25,8 @@ export const DiscoverHeader: React.FC<DiscoverHeaderProps> = ({
       <BrandBar />
 
       <AppText variant="meta" style={styles.eyebrow}>
-        {isAuthenticated
-          ? `Welcome back, ${firstName(user?.full_name, user?.email)}`
+        {isAuthenticated && user
+          ? `Welcome back, ${firstName(user.full_name, user.email)}`
           : 'Discover'}
       </AppText>
       <AppText style={styles.title}>Right moment to buy</AppText>
