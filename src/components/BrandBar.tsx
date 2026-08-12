@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import { BrandWordmark } from './BrandWordmark';
 import { AccountButton } from './AccountButton';
+import { NotificationBell } from './NotificationBell';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeColors, spacing } from '../styles/theme';
 
@@ -28,7 +29,10 @@ export const BrandBar: React.FC = () => {
         />
         <BrandWordmark textStyle={styles.wordmark} iwishColor={colors.brandEnd} />
       </View>
-      <AccountButton />
+      <View style={styles.right}>
+        <NotificationBell />
+        <AccountButton />
+      </View>
     </View>
   );
 };
@@ -42,6 +46,11 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: spacing.sm,
     },
     left: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    right: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,

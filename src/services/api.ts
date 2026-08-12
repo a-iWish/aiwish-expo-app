@@ -18,6 +18,7 @@ import {
   SharedListsResponse,
   SharedListDetail,
 } from '../types/product';
+import { NotificationsResponse } from '../types/notification';
 import { apiFetch } from './httpClient';
 
 function normalizeRecommendation(rec: unknown): string {
@@ -249,24 +250,21 @@ export function fetchFriendsWishes(): Promise<FriendsWishesResponse> {
   });
 }
 
-// --- Push notifications: register/unregister an Expo push token (auth) --- //
+// --- In-app notification feed (auth) --- //
 
-export function registerPushToken(
-  token: string,
-  platform?: string | null,
-): Promise<{ ok: boolean }> {
-  return apiFetch<{ ok: boolean }>('/api/notifications/register', {
-    method: 'POST',
+export function fetchNotifications(): Promise<NotificationsResponse> {
+  return apiFetch<NotificationsResponse>('/api/notifications', {
+    method: 'GET',
     auth: true,
-    body: { token, platform: platform ?? null },
   });
 }
 
-export function unregisterPushToken(token: string): Promise<{ ok: boolean }> {
-  return apiFetch<{ ok: boolean }>('/api/notifications/register', {
-    method: 'DELETE',
+/** Mark specific notifications read, or all of them when `ids` is omitted. */
+export function markNotificationsRead(ids?: string[]): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>('/api/notifications/read', {
+    method: 'POST',
     auth: true,
-    body: { token },
+    body: { ids: ids ?? null },
   });
 }
 

@@ -1,15 +1,13 @@
 /**
- * Expo push-notification registration.
+ * Local device notifications.
  *
- * Requests permission, obtains the device's Expo push token, and registers it
- * with the API so the price-drop background job can reach this device. Safe to
- * call repeatedly (the API upserts) and on the simulator (no-ops gracefully).
+ * The server decides WHAT to notify (the alert job / trigger route write rows
+ * into the notifications table); the app fetches unseen ones and presents them
+ * as local notifications — banner, sound, lock screen — indistinguishable from
+ * remote pushes but requiring no APNs/FCM credentials.
  */
 import { Platform } from 'react-native';
-import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
-import { registerPushToken, unregisterPushToken } from './api';
 
 // Foreground display behavior: show the alert + play sound.
 Notifications.setNotificationHandler({
@@ -21,65 +19,46 @@ Notifications.setNotificationHandler({
   }),
 });
 
-let cachedToken: string | null = null;
-
-async function getExpoPushToken(): Promise<string | null> {
-  // Push tokens only work on physical devices.
-  if (!Device.isDevice) return null;
-
-  const { status: existing } = await Notifications.getPermissionsAsync();
-  let status = existing;
-  if (existing !== 'granted') {
-    const req = await Notifications.requestPermissionsAsync();
-    status = req.status;
-  }
-  if (status !== 'granted') return null;
-
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.DEFAULT,
-    });
-  }
-
-  // projectId is required for getExpoPushTokenAsync in SDK 49+.
-  const projectId =
-    Constants.expoConfig?.extra?.eas?.projectId ??
-    Constants.easConfig?.projectId;
-  try {
-    const tokenResult = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined,
-    );
-    return tokenResult.data;
-  } catch {
-    return null;
-  }
-}
-
 /**
- * Register this device for push notifications and store the token server-side.
- * Returns the token on success, or null if unavailable (simulator/denied).
+ * Ask for notification permission (no-op if already granted/denied).
+ * Safe to call repeatedly; returns whether we may present notifications.
  */
-export async function registerForPushNotifications(): Promise<string | null> {
+export async function ensureNotificationPermissions(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
   try {
-    const token = await getExpoPushToken();
-    if (!token) return null;
-    cachedToken = token;
-    await registerPushToken(token, Platform.OS);
-    return token;
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    let status = existing;
+    if (existing !== 'granted') {
+      const req = await Notifications.requestPermissionsAsync();
+      status = req.status;
+    }
+    if (status !== 'granted') return false;
+
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.DEFAULT,
+      });
+    }
+    return true;
   } catch {
-    return null;
+    return false;
   }
 }
 
-/** Remove this device's token from the server (called on logout). */
-export async function unregisterForPushNotifications(): Promise<void> {
-  if (!cachedToken) return;
+/** Present a notification immediately (banner + sound + notification list). */
+export async function presentLocalNotification(
+  title: string,
+  body: string,
+  data?: Record<string, unknown>,
+): Promise<void> {
+  if (Platform.OS === 'web') return;
   try {
-    await unregisterPushToken(cachedToken);
+    await Notifications.scheduleNotificationAsync({
+      content: { title, body, data: data ?? {}, sound: 'default' },
+      trigger: null, // deliver now
+    });
   } catch {
     // best-effort
-  } finally {
-    cachedToken = null;
   }
 }
