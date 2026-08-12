@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Pressable, ScrollView } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, StyleSheet, Pressable, ScrollView, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -21,7 +21,8 @@ const APPEARANCE_OPTIONS: { value: AppearancePreference; label: string }[] = [
 
 export const SettingsScreen: React.FC = () => {
   const { colors, appearance, setAppearance } = useTheme();
-  const { isAuthenticated, user, logout, resendVerification } = useAuth();
+  const { isAuthenticated, user, logout, resendVerification, refreshUser } =
+    useAuth();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -29,6 +30,35 @@ export const SettingsScreen: React.FC = () => {
   const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent'>(
     'idle',
   );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated || user?.email_verified) return;
+      refreshUser().catch(() => undefined);
+    }, [isAuthenticated, user?.email_verified, refreshUser]),
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && isAuthenticated && !user?.email_verified) {
+        refreshUser().catch(() => undefined);
+      }
+    });
+    return () => sub.remove();
+  }, [isAuthenticated, user?.email_verified, refreshUser]);
+
+  const [justVerified, setJustVerified] = useState(false);
+  const wasVerifiedRef = useRef(user?.email_verified ?? false);
+  useEffect(() => {
+    const verified = user?.email_verified ?? false;
+    if (verified && !wasVerifiedRef.current) {
+      wasVerifiedRef.current = verified;
+      setJustVerified(true);
+      const t = setTimeout(() => setJustVerified(false), 5000);
+      return () => clearTimeout(t);
+    }
+    wasVerifiedRef.current = verified;
+  }, [user?.email_verified]);
 
   const handleResend = async () => {
     if (resendState === 'sending') return;
@@ -158,6 +188,15 @@ export const SettingsScreen: React.FC = () => {
                 </AppText>
               </Pressable>
             )}
+          </View>
+        )}
+
+        {isAuthenticated && user?.email_verified && justVerified && (
+          <View style={styles.verifiedBanner}>
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            <AppText variant="bodySemibold" style={{ color: colors.success }}>
+              Email verified
+            </AppText>
           </View>
         )}
       </View>
@@ -301,6 +340,18 @@ const createStyles = (colors: ThemeColors) =>
     },
     verifyAction: {
       color: colors.brandEnd,
+    },
+    verifiedBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.success,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
     },
     signInHint: {
       maxWidth: 260,
