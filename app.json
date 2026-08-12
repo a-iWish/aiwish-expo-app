@@ -2,6 +2,7 @@
   "expo": {
     "name": "a.iwish",
     "slug": "aiwish",
+    "owner": "maymichaeli",
     "version": "1.0.0",
     "scheme": "aiwish",
     "orientation": "portrait",
@@ -15,7 +16,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.aiwish"
+      "bundleIdentifier": "biz.chefi.aiwish"
     },
     "android": {
       "adaptiveIcon": {
@@ -30,7 +31,13 @@
     },
     "plugins": [
       "expo-font",
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      "expo-notifications"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "91e4cd7a-6214-4f30-9e03-aeed18f979a8"
+      }
+    }
   }
 }

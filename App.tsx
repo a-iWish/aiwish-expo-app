@@ -22,6 +22,8 @@ import { ChangePasswordScreen } from './src/screens/ChangePasswordScreen';
 import { SharedWishlistScreen } from './src/screens/SharedWishlistScreen';
 import { ProductComparisonScreen } from './src/screens/ProductComparisonScreen';
 import { SharedListDetailScreen } from './src/screens/SharedListDetailScreen';
+import { NotificationsScreen } from './src/screens/NotificationsScreen';
+import { NotificationTapHandler } from './src/components/NotificationTapHandler';
 import { MainTabs } from './src/navigation/MainTabs';
 import { RootStackParamList } from './src/navigation/types';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -138,7 +140,9 @@ function AppNavigator() {
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
         <Stack.Screen name="Compare" component={ProductComparisonScreen} />
         <Stack.Screen name="SharedListDetail" component={SharedListDetailScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </Stack.Navigator>
+      <NotificationTapHandler />
     </>
   );
 }

@@ -12,6 +12,7 @@ export type RootStackParamList = {
   ChangePassword: undefined;
   Compare: undefined;
   SharedListDetail: { listId: string };
+  Notifications: undefined;
 };
 
 export type MainTabParamList = {
