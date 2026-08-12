@@ -83,10 +83,7 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
             {sent ? (
               <View style={styles.form}>
                 <AppText variant="body" style={styles.successText}>
-                  If an account exists for{' '}
-                  <AppText variant="bodySemibold">{email.trim()}</AppText>, we've
-                  sent a reset link. Check your inbox and follow the link to
-                  choose a new password.
+                  Check your inbox and follow the link to choose a new password.
                 </AppText>
                 <Button
                   title="Back to sign in"
