@@ -345,24 +345,15 @@ export const ProductListScreen: React.FC<Props> = ({ navigation }) => {
       .filter((p): p is Product => p != null);
   }, [recentIds, products]);
 
-  const categoryCounts = useMemo(
-    () =>
-      products.reduce<Record<string, number>>((acc, product) => {
-        acc[product.category] = (acc[product.category] ?? 0) + 1;
-        return acc;
-      }, {}),
-    [products],
-  );
-
   const categoryChips = useMemo(
     () => [
-      { key: 'all', label: `All ${products.length}` },
+      { key: 'all', label: 'All' },
       ...ALL_CATEGORIES.map((cat) => ({
         key: cat,
-        label: `${CATEGORY_LABELS[cat] ?? cat} ${categoryCounts[cat] ?? 0}`,
+        label: CATEGORY_LABELS[cat] ?? cat,
       })),
     ],
-    [products.length, categoryCounts],
+    [],
   );
 
   const sortChips = useMemo(
