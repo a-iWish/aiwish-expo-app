@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ViewToken,
+  Platform,
 } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -320,10 +321,8 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       paddingHorizontal: spacing.xl,
     },
-    // Weighted heavier than the text area so the visual+text block settles
-    // lower on tall / web (Vercel) viewports instead of floating up.
     visualArea: {
-      flex: 2,
+      flex: Platform.OS === 'web' ? 2.5 : 1,
       justifyContent: 'flex-end',
       alignItems: 'center',
       paddingBottom: spacing.xxl,
