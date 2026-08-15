@@ -320,10 +320,10 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       paddingHorizontal: spacing.xl,
     },
-    // Weighted slightly heavier than the text area so the visual+text block
-    // settles lower on tall / web (Vercel) viewports instead of floating up.
+    // Weighted heavier than the text area so the visual+text block settles
+    // lower on tall / web (Vercel) viewports instead of floating up.
     visualArea: {
-      flex: 1.35,
+      flex: 2,
       justifyContent: 'flex-end',
       alignItems: 'center',
       paddingBottom: spacing.xxl,
