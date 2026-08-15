@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, Pressable, ScrollView, AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -12,6 +13,7 @@ import { ScreenHeader, AppText } from '../components';
 import { AppearancePreference } from '../styles/theme';
 
 const APP_VERSION = '1.0.0';
+const ONBOARDING_KEY = 'AIWISH_ONBOARDING_DONE';
 
 const APPEARANCE_OPTIONS: { value: AppearancePreference; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -75,6 +77,11 @@ export const SettingsScreen: React.FC = () => {
     .trim()
     .charAt(0)
     .toUpperCase();
+
+  const handleReplayIntro = useCallback(async () => {
+    await AsyncStorage.removeItem(ONBOARDING_KEY);
+    navigation.navigate('Onboarding');
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -228,6 +235,29 @@ export const SettingsScreen: React.FC = () => {
         </View>
         <AppText variant="caption" style={styles.appearanceHint}>
           Editorial light and dark themes tuned for verdict readability.
+        </AppText>
+      </View>
+
+      <View style={styles.section}>
+        <AppText variant="meta" style={styles.sectionLabel}>
+          About
+        </AppText>
+        <View style={styles.listGroup}>
+          <Pressable
+            style={styles.row}
+            onPress={handleReplayIntro}
+            accessibilityRole="button"
+          >
+            <AppText variant="body">Replay intro</AppText>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textSecondary}
+            />
+          </Pressable>
+        </View>
+        <AppText variant="caption" style={styles.appearanceHint}>
+          Version {APP_VERSION}
         </AppText>
       </View>
       </ScrollView>

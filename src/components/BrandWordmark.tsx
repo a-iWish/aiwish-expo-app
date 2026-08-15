@@ -29,33 +29,43 @@ export const BrandWordmark: React.FC<Props> = ({
   const { colors } = useTheme();
   const [stemBox, setStemBox] = useState({ w: 0, h: 0 });
 
-  const metrics = useMemo(() => {
+  // Split the caller's textStyle: layout margins belong on the OUTER row, not on
+  // the letters. Applying a marginTop to the inner "ı" shoves the letter down and
+  // leaves the absolutely-positioned heart floating above it.
+  const { heartSize, marginStyle, innerStyle } = useMemo(() => {
     const flat = StyleSheet.flatten(textStyle) ?? {};
+    const {
+      margin, marginTop, marginBottom, marginVertical, marginHorizontal,
+      marginLeft, marginRight, marginStart, marginEnd, ...rest
+    } = flat as Record<string, unknown>;
     const fs = typeof flat.fontSize === 'number' ? flat.fontSize : 20;
     return {
       heartSize: Math.max(7, Math.round(fs * 0.34)),
+      marginStyle: {
+        margin, marginTop, marginBottom, marginVertical, marginHorizontal,
+        marginLeft, marginRight, marginStart, marginEnd,
+      } as TextStyle,
+      innerStyle: rest as TextStyle,
     };
   }, [textStyle]);
 
   // Default the "a." + "ı" stem to the theme text color so they stay visible in
-  // both light and dark mode. Placed before textStyle so a caller can still
+  // both light and dark mode. Placed before innerStyle so a caller can still
   // override the color explicitly.
   const iTextStyle = useMemo(
     () => [
       { color: colors.text },
-      textStyle,
+      innerStyle,
       styles.iGlyph,
       Platform.OS === 'android' ? styles.iGlyphAndroid : null,
     ],
-    [textStyle, colors.text],
+    [innerStyle, colors.text],
   );
 
   const onStemLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     setStemBox({ w: width, h: height });
   }, []);
-
-  const { heartSize } = metrics;
 
   /**
    * Center the heart where the “i” tittle sits: upper band of the line box, on the stem.
@@ -77,11 +87,11 @@ export const BrandWordmark: React.FC<Props> = ({
 
   return (
     <View
-      style={styles.row}
+      style={[styles.row, marginStyle]}
       accessibilityRole="text"
       accessibilityLabel={accessibilityLabel}
     >
-      <Text style={[{ color: colors.text }, textStyle]}>a.</Text>
+      <Text style={[{ color: colors.text }, innerStyle]}>a.</Text>
       <View style={styles.iBlock}>
         <Text style={iTextStyle} onLayout={onStemLayout}>
           {I_DOTLESS}
@@ -114,7 +124,7 @@ export const BrandWordmark: React.FC<Props> = ({
           </View>
         )}
       </View>
-      <Text style={[textStyle, { color: iwishColor }]}>wish</Text>
+      <Text style={[innerStyle, { color: iwishColor }]}>wish</Text>
     </View>
   );
 };

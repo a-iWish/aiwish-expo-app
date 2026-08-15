@@ -33,6 +33,14 @@ import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 
 const ONBOARDING_KEY = 'AIWISH_ONBOARDING_DONE';
 
+// Dev-only: expose AsyncStorage on the global so you can clear flags from the
+// React Native DevTools console (press `j` in Metro), e.g.
+// AsyncStorage.removeItem('AIWISH_ONBOARDING_DONE'). Never runs in production.
+if (__DEV__) {
+  (globalThis as unknown as { AsyncStorage: typeof AsyncStorage }).AsyncStorage =
+    AsyncStorage;
+}
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // Deep linking: backend share URLs look like https://aiwish.app/wishlist/<token>.
