@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
   View,
+  Image,
   FlatList,
   useWindowDimensions,
   StyleSheet,
@@ -218,27 +219,40 @@ const OnboardingPage: React.FC<OnboardingPageProps> = React.memo(
 
 /* ── Page visuals ────────────────────────────────────────────────────── */
 
-/** Page 1: Brand wordmark over a gradient accent arc. */
+/** Page 1: App logo over a gradient accent, with the brand wordmark below. */
 const PageOneVisual: React.FC<{ colors: ThemeColors; styles: ReturnType<typeof createStyles> }> =
-  ({ colors, styles }) => (
-    <View style={styles.visualInner}>
-      <View style={styles.gradientAccent}>
-        <Svg width="100%" height="100%" style={StyleSheet.absoluteFillObject}>
-          <Defs>
-            <LinearGradient id="onbGrad" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0%" stopColor={colors.brandStart} stopOpacity="0.18" />
-              <Stop offset="100%" stopColor={colors.brandEnd} stopOpacity="0.18" />
-            </LinearGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" rx="24" fill="url(#onbGrad)" />
-        </Svg>
+  ({ colors, styles }) => {
+    const { isDark } = useTheme();
+    return (
+      <View style={styles.visualInner}>
+        <View style={styles.gradientAccent}>
+          <Svg width="100%" height="100%" style={StyleSheet.absoluteFillObject}>
+            <Defs>
+              <LinearGradient id="onbGrad" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0%" stopColor={colors.brandStart} stopOpacity="0.18" />
+                <Stop offset="100%" stopColor={colors.brandEnd} stopOpacity="0.18" />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="100%" rx="24" fill="url(#onbGrad)" />
+          </Svg>
+          <Image
+            source={
+              isDark
+                ? require('../../assets/aiwish-logo-transparent-dark.png')
+                : require('../../assets/aiwish-logo-transparent-light.png')
+            }
+            style={styles.logo}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
+        </View>
+        <BrandWordmark
+          textStyle={styles.wordmarkText}
+          accessibilityLabel="a.iwish"
+        />
       </View>
-      <BrandWordmark
-        textStyle={styles.wordmarkText}
-        accessibilityLabel="a.iwish"
-      />
-    </View>
-  );
+    );
+  };
 
 /** Page 2: BUY / WAIT verdict words stacked. */
 const PageTwoVisual: React.FC<{ colors: ThemeColors; styles: ReturnType<typeof createStyles> }> =
@@ -306,8 +320,10 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       paddingHorizontal: spacing.xl,
     },
+    // Weighted slightly heavier than the text area so the visual+text block
+    // settles lower on tall / web (Vercel) viewports instead of floating up.
     visualArea: {
-      flex: 1,
+      flex: 1.35,
       justifyContent: 'flex-end',
       alignItems: 'center',
       paddingBottom: spacing.xxl,
@@ -374,6 +390,10 @@ const createStyles = (colors: ThemeColors) =>
       overflow: 'hidden',
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    logo: {
+      width: 112,
+      height: 112,
     },
     wordmarkText: {
       fontSize: 38,
