@@ -1,13 +1,15 @@
 import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
   View,
+  Image,
   FlatList,
   useWindowDimensions,
   StyleSheet,
   TouchableOpacity,
   ViewToken,
+  Platform,
 } from 'react-native';
-import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Stop, Rect, Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -23,7 +25,6 @@ import {
   fontSize,
   DISPLAY_FONT,
   BODY_FONT,
-  SEMIBOLD_FONT,
   MIN_TOUCH,
 } from '../styles/theme';
 import { verdictColor } from '../utils/verdictStyle';
@@ -218,27 +219,40 @@ const OnboardingPage: React.FC<OnboardingPageProps> = React.memo(
 
 /* ── Page visuals ────────────────────────────────────────────────────── */
 
-/** Page 1: Brand wordmark over a gradient accent arc. */
+/** Page 1: App logo over a gradient accent, with the brand wordmark below. */
 const PageOneVisual: React.FC<{ colors: ThemeColors; styles: ReturnType<typeof createStyles> }> =
-  ({ colors, styles }) => (
-    <View style={styles.visualInner}>
-      <View style={styles.gradientAccent}>
-        <Svg width="100%" height="100%" style={StyleSheet.absoluteFillObject}>
-          <Defs>
-            <LinearGradient id="onbGrad" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0%" stopColor={colors.brandStart} stopOpacity="0.18" />
-              <Stop offset="100%" stopColor={colors.brandEnd} stopOpacity="0.18" />
-            </LinearGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" rx="24" fill="url(#onbGrad)" />
-        </Svg>
+  ({ colors, styles }) => {
+    const { isDark } = useTheme();
+    return (
+      <View style={styles.visualInner}>
+        <View style={styles.gradientAccent}>
+          <Svg width="100%" height="100%" style={StyleSheet.absoluteFillObject}>
+            <Defs>
+              <LinearGradient id="onbGrad" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0%" stopColor={colors.brandStart} stopOpacity="0.18" />
+                <Stop offset="100%" stopColor={colors.brandEnd} stopOpacity="0.18" />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="100%" rx="24" fill="url(#onbGrad)" />
+          </Svg>
+          <Image
+            source={
+              isDark
+                ? require('../../assets/aiwish-logo-transparent-dark.png')
+                : require('../../assets/aiwish-logo-transparent-light.png')
+            }
+            style={styles.logo}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
+        </View>
+        <BrandWordmark
+          textStyle={styles.wordmarkText}
+          accessibilityLabel="a.iwish"
+        />
       </View>
-      <BrandWordmark
-        textStyle={styles.wordmarkText}
-        accessibilityLabel="a.iwish"
-      />
-    </View>
-  );
+    );
+  };
 
 /** Page 2: BUY / WAIT verdict words stacked. */
 const PageTwoVisual: React.FC<{ colors: ThemeColors; styles: ReturnType<typeof createStyles> }> =
@@ -274,7 +288,18 @@ const PageThreeVisual: React.FC<{ colors: ThemeColors; styles: ReturnType<typeof
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" rx="100" fill="url(#heartGrad)" />
         </Svg>
-        <AppText style={styles.heartGlyph}>&#9829;</AppText>
+        <Svg width={72} height={72} viewBox="0 0 24 24">
+          <Defs>
+            <LinearGradient id="heartFill" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0%" stopColor={colors.brandStart} />
+              <Stop offset="100%" stopColor={colors.brandEnd} />
+            </LinearGradient>
+          </Defs>
+          <Path
+            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+            fill="url(#heartFill)"
+          />
+        </Svg>
       </View>
     </View>
   );
@@ -307,7 +332,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing.xl,
     },
     visualArea: {
-      flex: 1,
+      flex: Platform.OS === 'web' ? 2.5 : 1,
       justifyContent: 'flex-end',
       alignItems: 'center',
       paddingBottom: spacing.xxl,
@@ -375,6 +400,10 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    logo: {
+      width: 112,
+      height: 112,
+    },
     wordmarkText: {
       fontSize: 38,
       fontFamily: DISPLAY_FONT,
@@ -399,10 +428,5 @@ const createStyles = (colors: ThemeColors) =>
       overflow: 'hidden',
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    heartGlyph: {
-      fontSize: 64,
-      color: colors.brandStart,
-      fontFamily: SEMIBOLD_FONT,
     },
   });
