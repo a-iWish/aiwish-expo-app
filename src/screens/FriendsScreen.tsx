@@ -5,7 +5,6 @@ import {
   Pressable,
   Image,
   TextInput,
-  Alert,
   ActivityIndicator,
   Keyboard,
   RefreshControl,
@@ -18,6 +17,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
+import { notify, confirmAction } from '../utils/platformAlert';
 import { FriendWishItem, UserSuggestion } from '../types/product';
 import {
   followUser,
@@ -126,13 +126,13 @@ export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
       setEmail('');
       invalidate();
     },
-    onError: (err: Error) => Alert.alert('Error', err.message || 'Could not follow'),
+    onError: (err: Error) => notify('Error', err.message || 'Could not follow'),
   });
 
   const unfollowMutation = useMutation({
     mutationFn: (id: string) => unfollowUser(id),
     onSuccess: invalidate,
-    onError: (err: Error) => Alert.alert('Error', err.message || 'Could not unfollow'),
+    onError: (err: Error) => notify('Error', err.message || 'Could not unfollow'),
   });
 
   const handleFollow = useCallback(() => {
@@ -248,10 +248,13 @@ export const FriendsScreen: React.FC<Props> = ({ navigation }) => {
               style={styles.chip}
               hitSlop={8}
               onPress={() =>
-                Alert.alert('Unfollow', `Stop following ${u.full_name || u.email}?`, [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Unfollow', style: 'destructive', onPress: () => unfollowMutation.mutate(u.id) },
-                ])
+                confirmAction({
+                  title: 'Unfollow',
+                  message: `Stop following ${u.full_name || u.email}?`,
+                  confirmText: 'Unfollow',
+                  destructive: true,
+                  onConfirm: () => unfollowMutation.mutate(u.id),
+                })
               }
             >
               <AppText variant="caption" style={styles.chipText}>

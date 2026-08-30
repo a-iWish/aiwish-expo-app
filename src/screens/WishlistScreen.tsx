@@ -4,8 +4,6 @@ import {
   StyleSheet,
   Pressable,
   RefreshControl,
-  Share,
-  Alert,
   Switch,
   Modal,
 } from 'react-native';
@@ -19,6 +17,7 @@ import { useProducts } from '../hooks/useProducts';
 import { useWishlist } from '../hooks/useWishlist';
 import { Product, WishlistItem } from '../types/product';
 import { shareWishlist, updateWishlistItem } from '../services/api';
+import { notify, shareContent } from '../utils/platformAlert';
 import { EditorialProductRow, AppText, Button } from '../components';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -168,13 +167,14 @@ export const WishlistScreen: React.FC<Props> = ({ navigation }) => {
     setSharing(true);
     try {
       const result = await shareWishlist();
-      await Share.share({
+      await shareContent({
+        title: 'My a.iwish wishlist',
         message: `Check out my wishlist: ${result.share_url}`,
         url: result.share_url,
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Could not share';
-      Alert.alert('Error', msg);
+      notify('Error', msg);
     } finally {
       setSharing(false);
     }
@@ -187,7 +187,7 @@ export const WishlistScreen: React.FC<Props> = ({ navigation }) => {
         queryClient.invalidateQueries({ queryKey: WISHLIST_QUERY_KEY });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Update failed';
-        Alert.alert('Error', msg);
+        notify('Error', msg);
       }
     },
     [queryClient],
@@ -208,7 +208,7 @@ export const WishlistScreen: React.FC<Props> = ({ navigation }) => {
         queryClient.invalidateQueries({ queryKey: WISHLIST_QUERY_KEY });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Update failed';
-        Alert.alert('Error', msg);
+        notify('Error', msg);
       }
     },
     [occasionTarget, queryClient],

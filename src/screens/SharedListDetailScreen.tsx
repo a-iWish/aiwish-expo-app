@@ -5,8 +5,6 @@ import {
   Pressable,
   Image,
   ScrollView,
-  Share,
-  Alert,
   ActivityIndicator,
   TextInput,
   RefreshControl,
@@ -15,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RootStackParamList } from '../navigation/types';
+import { notify, confirmAction, shareContent } from '../utils/platformAlert';
 import { Product, SharedListItem } from '../types/product';
 import {
   fetchSharedListDetail,
@@ -57,20 +56,20 @@ export const SharedListDetailScreen: React.FC<Props> = ({ navigation, route }) =
   const addMutation = useMutation({
     mutationFn: (productId: string) => addSharedListItem(listId, productId),
     onSuccess: invalidate,
-    onError: (err: Error) => Alert.alert('Error', err.message || 'Could not add item'),
+    onError: (err: Error) => notify('Error', err.message || 'Could not add item'),
   });
 
   const removeMutation = useMutation({
     mutationFn: (productId: string) => removeSharedListItem(listId, productId),
     onSuccess: invalidate,
-    onError: (err: Error) => Alert.alert('Error', err.message || 'Could not remove item'),
+    onError: (err: Error) => notify('Error', err.message || 'Could not remove item'),
   });
 
   const claimMutation = useMutation({
     mutationFn: ({ productId, claim }: { productId: string; claim: boolean }) =>
       claimSharedListItem(listId, productId, claim),
     onSuccess: invalidate,
-    onError: (err: Error) => Alert.alert('Error', err.message || 'Could not update claim'),
+    onError: (err: Error) => notify('Error', err.message || 'Could not update claim'),
   });
 
   const leaveMutation = useMutation({
@@ -79,7 +78,7 @@ export const SharedListDetailScreen: React.FC<Props> = ({ navigation, route }) =
       queryClient.invalidateQueries({ queryKey: SHARED_LISTS_KEY });
       navigation.goBack();
     },
-    onError: (err: Error) => Alert.alert('Error', err.message || 'Could not leave list'),
+    onError: (err: Error) => notify('Error', err.message || 'Could not leave list'),
   });
 
   const detail = detailQuery.data;
@@ -94,26 +93,22 @@ export const SharedListDetailScreen: React.FC<Props> = ({ navigation, route }) =
 
   const handleShareCode = useCallback(() => {
     if (!detail) return;
-    Share.share({
+    shareContent({
+      title: detail.name,
       message: `Join my "${detail.name}" list on a.iwish with invite code ${detail.invite_code}`,
     });
   }, [detail]);
 
   const handleLeave = useCallback(() => {
-    Alert.alert(
-      isOwner ? 'Delete list' : 'Leave list',
-      isOwner
+    confirmAction({
+      title: isOwner ? 'Delete list' : 'Leave list',
+      message: isOwner
         ? 'You own this list — leaving deletes it for everyone. Continue?'
         : 'Stop collaborating on this list?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: isOwner ? 'Delete' : 'Leave',
-          style: 'destructive',
-          onPress: () => leaveMutation.mutate(),
-        },
-      ],
-    );
+      confirmText: isOwner ? 'Delete' : 'Leave',
+      destructive: true,
+      onConfirm: () => leaveMutation.mutate(),
+    });
   }, [isOwner, leaveMutation]);
 
   // Wishlist products not already on the shared list — candidates to add.

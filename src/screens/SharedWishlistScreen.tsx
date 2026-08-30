@@ -5,7 +5,6 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -15,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RootStackParamList } from '../navigation/types';
 import { SharedWishlistItem } from '../types/product';
 import { getSharedWishlist, markBought } from '../services/api';
+import { notify } from '../utils/platformAlert';
 import { AppText, Button } from '../components';
 import { RecommendationBadge } from '../components/RecommendationBadge';
 import { useTheme } from '../context/ThemeContext';
@@ -143,10 +143,10 @@ export const SharedWishlistScreen: React.FC<Props> = ({ route, navigation }) => 
     onMutate: (productId) => setMarkingId(productId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shared-wishlist', token] });
-      Alert.alert('Done', 'Item marked as bought.');
+      notify('Done', 'Item marked as bought.');
     },
     onError: (err: Error) => {
-      Alert.alert('Error', err.message || 'Could not mark item.');
+      notify('Error', err.message || 'Could not mark item.');
     },
     onSettled: () => setMarkingId(null),
   });
