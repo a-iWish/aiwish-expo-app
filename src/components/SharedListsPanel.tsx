@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Pressable,
   TextInput,
-  Alert,
   ActivityIndicator,
   RefreshControl,
   ScrollView,
@@ -13,6 +12,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SharedListSummary } from '../types/product';
 import { createSharedList, joinSharedList, fetchSharedLists } from '../services/api';
+import { notify } from '../utils/platformAlert';
 import { AppText } from './AppText';
 import { Button } from './Button';
 import { useTheme } from '../context/ThemeContext';
@@ -86,7 +86,7 @@ export const SharedListsPanel: React.FC<SharedListsPanelProps> = ({ onOpenList }
       invalidate();
       onOpenList(summary.id);
     },
-    onError: (err: Error) => Alert.alert('Error', err.message || 'Could not create list'),
+    onError: (err: Error) => notify('Error', err.message || 'Could not create list'),
   });
 
   const joinMutation = useMutation({
@@ -96,7 +96,7 @@ export const SharedListsPanel: React.FC<SharedListsPanelProps> = ({ onOpenList }
       invalidate();
       onOpenList(summary.id);
     },
-    onError: (err: Error) => Alert.alert('Error', err.message || 'Could not join list'),
+    onError: (err: Error) => notify('Error', err.message || 'Could not join list'),
   });
 
   const handleCreate = useCallback(() => {

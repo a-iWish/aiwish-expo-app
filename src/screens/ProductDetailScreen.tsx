@@ -394,17 +394,49 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
             )}
           </View>
 
-          {showDatePicker && (
-            <DateTimePicker
-              value={deadline ?? new Date(Date.now() + 14 * 86400000)}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'inline' : 'default'}
-              minimumDate={new Date()}
-              onValueChange={handleDeadlineChange}
-              onDismiss={handleDeadlineDismiss}
-              themeVariant={colors.background === '#09090B' ? 'dark' : 'light'}
-            />
-          )}
+          {showDatePicker &&
+            (Platform.OS === 'web' ? (
+              // @react-native-community/datetimepicker has no web build, so on
+              // web we fall back to the browser's native date input.
+              <input
+                type="date"
+                autoFocus
+                value={toISODate(deadline ?? new Date(Date.now() + 14 * 86400000))}
+                min={toISODate(new Date())}
+                onChange={(e) => {
+                  const v = (e.target as HTMLInputElement).value;
+                  if (!v) {
+                    handleDeadlineDismiss();
+                    return;
+                  }
+                  handleDeadlineChange(
+                    {} as DateTimePickerChangeEvent,
+                    parseISODate(v),
+                  );
+                }}
+                onBlur={handleDeadlineDismiss}
+                style={{
+                  marginTop: 8,
+                  fontSize: 16,
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  border: `1px solid ${colors.border}`,
+                  background: colors.surface,
+                  color: colors.text,
+                  colorScheme: colors.background === '#09090B' ? 'dark' : 'light',
+                }}
+              />
+            ) : (
+              <DateTimePicker
+                value={deadline ?? new Date(Date.now() + 14 * 86400000)}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                minimumDate={new Date()}
+                onValueChange={handleDeadlineChange}
+                onDismiss={handleDeadlineDismiss}
+                themeVariant={colors.background === '#09090B' ? 'dark' : 'light'}
+              />
+            ))}
 
           {deadlineUrgency != null && (
             <View
